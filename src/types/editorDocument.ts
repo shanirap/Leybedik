@@ -1,4 +1,4 @@
-export type EditorElementType = "textBox" | "songLine" | "tabBlock" | "symbol";
+export type EditorElementType = "textBox" | "songLine" | "tabBlock" | "symbol" | "image";
 
 export interface EditorDocumentContent {
   version: number;
@@ -118,6 +118,11 @@ export interface TabNote {
   position: number;
   value: string;
 }
+export interface TabRepeatMark {
+  id: string;
+  type: "repeatStart" | "repeatEnd";
+  position: number;
+}
 
 export interface TabBlockElement extends BaseElement {
   type: "tabBlock";
@@ -130,6 +135,7 @@ export interface TabBlockElement extends BaseElement {
     // New guitar tab model
     lines?: string[];
     tabNumber?: string;
+    repeatMarks?: TabRepeatMark[];
   };
 }
 
@@ -166,9 +172,19 @@ export interface SymbolElement extends BaseElement {
     attachment?: SymbolElementAttachment;
   };
 }
+export interface ImageElementData {
+  src: string;
+  fileName?: string;
+}
+
+export interface ImageElement extends BaseElement {
+  type: "image";
+  data: ImageElementData;
+}
 
 export type EditorElement =
   | TextBoxElement
   | SongLineElement
   | TabBlockElement
-  | SymbolElement;
+  | SymbolElement
+  | ImageElement;

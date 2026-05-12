@@ -46,9 +46,6 @@ const SONGLINE_HEIGHT = 92;
 const SONGLINE_MIN_WIDTH = 180;
 const TAB_BLOCK_MIN_WIDTH = 180;
 const TAB_BLOCK_MIN_HEIGHT = 120;
-const PAGE_CONTENT_MARGIN_X = 70;
-const SONG_LINE_START_Y = 90;
-const SONG_LINE_WIDTH_PADDING = PAGE_CONTENT_MARGIN_X * 2;
 const SONG_LINE_HEIGHT = 92;
 const SONG_LINE_GAP = 10;
 const A4_PAGE_WIDTH = 794;
@@ -64,40 +61,6 @@ const TAB_BLOCK_HEIGHT = 150;
 const TEMPLATE_GAP = 12;
 const FIRST_TEMPLATE_Y = 120;
 
-
-// function layoutSongLinesOnPage(page: PageJson): PageJson {
-//   let songLineIndex = 0;
-
-//   const songLines = page.elements
-//     .filter((element) => element.type === "songLine")
-//     .sort((a, b) => a.y - b.y);
-
-//   const songLineOrder = new Map<string, number>();
-
-//   songLines.forEach((element, index) => {
-//     songLineOrder.set(element.id, index);
-//   });
-
-//   return {
-//     ...page,
-//     elements: page.elements.map((element) => {
-//       if (element.type !== "songLine") {
-//         return element;
-//       }
-
-//       const orderedIndex = songLineOrder.get(element.id) ?? songLineIndex;
-//       songLineIndex += 1;
-
-//       return {
-//         ...element,
-//         x: PAGE_CONTENT_MARGIN_X,
-//         y: SONG_LINE_START_Y + orderedIndex * (SONG_LINE_HEIGHT + SONG_LINE_GAP),
-//         width: Math.max(240, page.width - SONG_LINE_WIDTH_PADDING),
-//         height: SONG_LINE_HEIGHT,
-//       };
-//     }),
-//   };
-// }
 function isTemplateElement(element: EditorElement): boolean {
   return element.type === "songLine" || element.type === "tabBlock";
 }
@@ -318,7 +281,6 @@ export function LeybedikStudio(props: LeybedikStudioProps) {
   if (!currentDocument) {
     throw new Error("LeybedikStudio requires currentDocument or document");
   }
-
   const saveDocument =
     props.onSaveDocument ??
     props.onSave ??
@@ -335,7 +297,7 @@ export function LeybedikStudio(props: LeybedikStudioProps) {
     "saved" | "dirty" | "saving" | "error"
   >("saved");
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
-
+const imageInputRef = useRef<HTMLInputElement | null>(null);
   const editorStateRef = useRef(editorState);
   const titleRef = useRef(title);
   const saveTimerRef = useRef<number | null>(null);
@@ -641,6 +603,63 @@ const findSongLineIdAtPoint = useCallback(
     return null;
   },
   []
+);
+const handleImageFileSelected = useCallback(
+  (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      alert("אפשר להעלות קובץ תמונה בלבד.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const src = String(reader.result ?? "");
+
+      if (!src) {
+        alert("לא הצלחתי לקרוא את התמונה.");
+        return;
+      }
+
+      const pageId = activePageId ?? editorStateRef.current.pages[0]?.id;
+
+      if (!pageId) {
+        return;
+      }
+
+      const imageElement = {
+        id: createId("image"),
+        type: "image" as const,
+        x: 80,
+        y: 100,
+        width: 260,
+        height: 180,
+        zIndex: getNextZIndex(editorStateRef.current),
+        data: {
+          src,
+          fileName: file.name,
+        },
+      };
+
+      updateDocumentState((current) => ({
+        ...current,
+        pages: current.pages.map((page) =>
+          page.id === pageId
+            ? {
+                ...page,
+                elements: [...page.elements, imageElement],
+              }
+            : page
+        ),
+      }));
+
+      setActivePageId(pageId);
+      setSelectedElementId(imageElement.id);
+    };
+
+    reader.readAsDataURL(file);
+  },
+  [activePageId, updateDocumentState]
 );
 const handleElementDrop = useCallback(
   (
@@ -1585,11 +1604,13 @@ function moveAttachedSymbolHorizontally(elementId: string, deltaX: number) {
   setActivePageId(newPageId);
   setSelectedElementId(null);
 }, [updateDocumentState]);
+
+const addImage = useCallback(() => {
+  imageInputRef.current?.click();
+}, []);
+
   const handlePrint = useCallback(() => {
   setSelectedElementId(null);
-
-
-  
   window.setTimeout(() => {
     window.print();
   }, 80);
@@ -1597,6 +1618,22 @@ function moveAttachedSymbolHorizontally(elementId: string, deltaX: number) {
 
   return (
     <div className="leybedik-studio">
+      <input
+  ref={imageInputRef}
+  type="file"
+  accept="image/*"
+  style={{ display: "none" }}
+  onChange={(event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    handleImageFileSelected(file);
+    event.target.value = "";
+  }}
+/>
       <header className="studio-topbar">
         <div className="studio-topbar-actions">
           {onBackToDocuments ? (
@@ -1643,6 +1680,7 @@ function moveAttachedSymbolHorizontally(elementId: string, deltaX: number) {
           onPrint={handlePrint}
           onAddPage={addPage}
           onAddGuitarSongLine={addGuitarSongLine}
+          onAddImage={addImage}
         />
 
         <main className="studio-main">

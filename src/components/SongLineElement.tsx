@@ -108,11 +108,13 @@ export function SongLineElement({
   onAddAttachedSmallSharpToSongLine,
   onDrop,
 }: SongLineElementProps) {
-  const data = element.data;
-  const isGuitar = data.instrument === "guitar";
+const data = element.data;
+const isGuitar = data.instrument === "guitar";
 const direction = isGuitar ? "rtl" : data.direction;
 const textAlign = isGuitar ? "right" : data.lyricsAlign;
-  const lyricsInputRef = useRef<HTMLInputElement | null>(null);
+const chordDirection = isGuitar ? "rtl" : "ltr";
+const chordTextAlign = isGuitar ? "right" : "left";
+const lyricsInputRef = useRef<HTMLInputElement | null>(null);
 const [circleMenu, setCircleMenu] = useState<{
   screenX: number;
   screenY: number;
@@ -151,56 +153,62 @@ const [circleMenu, setCircleMenu] = useState<{
     }));
   }
 
- 
-  function placeCaretInChordLine(
-    event: MouseEvent<HTMLInputElement>,
-    line: ChordLineKey
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-    onSelect();
+ function placeCaretInChordLine(
+  event: MouseEvent<HTMLInputElement>,
+  line: ChordLineKey
+) {
+  event.preventDefault();
+  event.stopPropagation();
+  onSelect();
 
-    const input = event.currentTarget;
-    const rect = input.getBoundingClientRect();
-    const style = window.getComputedStyle(input);
+  const input = event.currentTarget;
+  const rect = input.getBoundingClientRect();
+  const style = window.getComputedStyle(input);
 
-    const paddingLeft = Number.parseFloat(style.paddingLeft || "0");
-    const paddingRight = Number.parseFloat(style.paddingRight || "0");
+  const paddingLeft = Number.parseFloat(style.paddingLeft || "0");
+  const paddingRight = Number.parseFloat(style.paddingRight || "0");
 
-    const usableWidth = Math.max(1, rect.width - paddingLeft - paddingRight);
-    const clickX = Math.max(
-      0,
-      Math.min(usableWidth, event.clientX - rect.left - paddingLeft)
-    );
+  const usableWidth = Math.max(1, rect.width - paddingLeft - paddingRight);
 
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
 
-    let spaceWidth = 8;
+  let spaceWidth = 8;
 
-    if (context) {
-      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-      spaceWidth = context.measureText(" ").width || spaceWidth;
-    }
-
-    const targetIndex = Math.max(0, Math.round(clickX / spaceWidth));
-    const currentValue = input.value;
-
-    const nextValue =
-      currentValue.length < targetIndex
-        ? currentValue.padEnd(targetIndex, " ")
-        : currentValue;
-
-    if (nextValue !== currentValue) {
-      updateChordLine(line, nextValue);
-    }
-
-    requestAnimationFrame(() => {
-      input.focus();
-      input.setSelectionRange(targetIndex, targetIndex);
-    });
+  if (context) {
+    context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    spaceWidth = context.measureText(" ").width || spaceWidth;
   }
 
+  const isRtlInput = input.dir === "rtl" || style.direction === "rtl";
+
+  const clickX = isRtlInput
+    ? Math.max(
+        0,
+        Math.min(usableWidth, rect.right - paddingRight - event.clientX)
+      )
+    : Math.max(
+        0,
+        Math.min(usableWidth, event.clientX - rect.left - paddingLeft)
+      );
+
+  const targetIndex = Math.max(0, Math.round(clickX / spaceWidth));
+  const currentValue = input.value;
+
+  const nextValue =
+    currentValue.length < targetIndex
+      ? currentValue.padEnd(targetIndex, " ")
+      : currentValue;
+
+  if (nextValue !== currentValue) {
+    updateChordLine(line, nextValue);
+  }
+
+  requestAnimationFrame(() => {
+    input.focus();
+    input.setSelectionRange(targetIndex, targetIndex);
+  });
+}
   function preventEnter(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -421,10 +429,12 @@ startElementDrag(event, {
           className="song-line-chord-text-row"
           value={chordLines.aboveTop ?? ""}
           placeholder="אקורדים"
-          dir={direction}
+          dir={chordDirection}
           style={{
             fontSize: data.chordFontSize,
             color: data.chordColor,
+            textAlign: chordTextAlign,
+    direction: chordDirection,
           }}
           onMouseDown={(event) => placeCaretInChordLine(event, "aboveTop")}
           onChange={(event) => updateChordLine("aboveTop", event.target.value)}
@@ -488,91 +498,97 @@ startElementDrag(event, {
         ) : null}
       </div>
 
-      {isSelected && !isGuitar ?(
-        <div className="song-line-inline-toolbar">
-          
-          <button
-  type="button"
-  onMouseDown={(event) => {
-    event.preventDefault();
-    event.stopPropagation();
+   {isSelected ? (
+  <div className="song-line-inline-toolbar">
+    {!isGuitar ? (
+      <>
+        <button
+          type="button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-    const input = lyricsInputRef.current;
-    if (!input) {
-      return;
-    }
+            const input = lyricsInputRef.current;
+            if (!input) {
+              return;
+            }
 
-    const caretIndex = input.selectionStart ?? 0;
-    const center = getCharacterCenterInsideSongLine(input, caretIndex);
+            const caretIndex = input.selectionStart ?? 0;
+            const center = getCharacterCenterInsideSongLine(input, caretIndex);
 
-    onAddAttachedSmallSharpToSongLine(
-      page.id,
-      element.id,
-      center.x - 2,
-      4,
-      8,
-      10
-    );
-  }}
->
-  + דיאז
-</button>
-          <button
-  type="button"
-  onMouseDown={(event) => {
-    event.preventDefault();
-    event.stopPropagation();
+            onAddAttachedSmallSharpToSongLine(
+              page.id,
+              element.id,
+              center.x - 2,
+              4,
+              8,
+              10
+            );
+          }}
+        >
+          + דיאז
+        </button>
 
-    onAddAttachedVoltaToSongLine(
-      page.id,
-      element.id,
-      20,
-      18,
-      90,
-      28
-    );
-  }}
->
-  + וולטה
-</button>
-<button
-  type="button"
-  onMouseDown={(event) => {
-    event.preventDefault();
-    event.stopPropagation();
+        <button
+          type="button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-    onAddAttachedArrowToSongLine(
-      page.id,
-      element.id,
-      60,
-      10,
-      32,
-      20
-    );
-  }}
->
-  + חץ
-</button>
-<button
-  type="button"
-  onMouseDown={(event) => {
-    event.preventDefault();
-    event.stopPropagation();
+            onAddAttachedArrowToSongLine(
+              page.id,
+              element.id,
+              60,
+              10,
+              32,
+              20
+            );
+          }}
+        >
+          + חץ
+        </button>
 
-    onAddAttachedRepeatEndToSongLine(
-      page.id,
-      element.id,
-      element.width - 28,
-      -7,
-      24,
-      48
-    );
-  }}
->
-  + סגירה
-</button>
-        </div>
-      ) : null}
+        <button
+          type="button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            onAddAttachedRepeatEndToSongLine(
+              page.id,
+              element.id,
+              element.width - 28,
+              -7,
+              24,
+              48
+            );
+          }}
+        >
+          + סגירה
+        </button>
+      </>
+    ) : null}
+
+    <button
+      type="button"
+      onMouseDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        onAddAttachedVoltaToSongLine(
+          page.id,
+          element.id,
+          20,
+          18,
+          90,
+          28
+        );
+      }}
+    >
+      + וולטה
+    </button>
+  </div>
+) : null}
 
       {isSelected ? (
         <div className="element-controls">

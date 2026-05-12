@@ -12,6 +12,7 @@ interface EditorToolbarProps {
   onPrint: () => void;
   onAddPage: () => void;
   onAddGuitarSongLine: () => void;
+   onAddImage: () => void;
 }
 
 export function EditorToolbar({
@@ -28,6 +29,7 @@ onAddFraction,
  onPrint,
 onAddPage,
 onAddGuitarSongLine,
+onAddImage,
 }: EditorToolbarProps) {
   return (
     <aside className="editor-toolbar" aria-label="כלי עריכה">
@@ -42,7 +44,9 @@ onAddGuitarSongLine,
         <button type="button" className="toolbar-button" onClick={onAddTextBox}>
           + תיבת טקסט
         </button>
-        
+        <button type="button" className="toolbar-button" onClick={onAddImage}>
+  + תמונה
+</button>
         <button type="button" className="toolbar-button" onClick={onAddRepeatEnd}>
           + סגירת חזרה
         </button>
@@ -72,8 +76,8 @@ onAddGuitarSongLine,
       </ToolbarSection>
 
       <ToolbarSection title="גיטרה">
-         <button type="button" onClick={onAddGuitarSongLine}>
-    + שורת מילים עם אקורדים
+         <button type="button"  className="toolbar-button" onClick={onAddGuitarSongLine}>
+    + שורת שיר עם אקורדים
   </button>
 
         <button type="button" className="toolbar-button" onClick={onAddTabBlock}>

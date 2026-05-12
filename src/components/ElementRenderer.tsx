@@ -5,13 +5,14 @@ import type {
   SymbolElement as SymbolElementType,
   TabBlockElement as TabBlockElementType,
   TextBoxElement as TextBoxElementType,
+  ImageElement as ImageElementType,
 } from "../types/editorDocument";
 import { SongLineElement } from "./SongLineElement";
 import { SymbolElement } from "./SymbolElement";
 import { TabBlockElement } from "./TabBlockElement";
 import { TextBoxElement } from "./TextBoxElement";
 import { getAttachedSymbolPosition } from "./attachedSymbolUtils";
-
+import { ImageElementView } from "./ImageElementView";
 interface ElementRendererProps {
   page: PageJson;
   element: EditorElement;
@@ -119,20 +120,41 @@ export function ElementRenderer({
     );
   }
 
-  if (element.type === "songLine") {
-    return (
-      <SongLineElement
-        {...commonProps}
-        element={element as SongLineElementType}
-        onUpdate={(patch) => onUpdate(patch as Partial<EditorElement>)}
-        onUpdateData={(updater) => onUpdateData<SongLineElementType>(updater)}
-        onAddCircleNumberAtPosition={onAddCircleNumberAtPosition}
-        onAddAttachedCircleNumberToSongLine={onAddAttachedCircleNumberToSongLine}
-        onAddAttachedVoltaToSongLine={onAddAttachedVoltaToSongLine}
-        onAddAttachedArrowToSongLine={onAddAttachedArrowToSongLine}
-onAddAttachedRepeatEndToSongLine={onAddAttachedRepeatEndToSongLine}      />
-    );
-  }
+//   if (element.type === "songLine") {
+//     return (
+//       <SongLineElement
+//         {...commonProps}
+//         element={element as SongLineElementType}
+//         onUpdate={(patch) => onUpdate(patch as Partial<EditorElement>)}
+//         onUpdateData={(updater) => onUpdateData<SongLineElementType>(updater)}
+//         onAddCircleNumberAtPosition={onAddCircleNumberAtPosition}
+//         onAddAttachedCircleNumberToSongLine={onAddAttachedCircleNumberToSongLine}
+//         onAddAttachedVoltaToSongLine={onAddAttachedVoltaToSongLine}
+//         onAddAttachedArrowToSongLine={onAddAttachedArrowToSongLine}
+// onAddAttachedRepeatEndToSongLine={onAddAttachedRepeatEndToSongLine}      />
+//     );
+//   }
+
+if (element.type === "songLine") {
+  return (
+    <SongLineElement
+      {...commonProps}
+      element={element as SongLineElementType}
+      onUpdate={(patch: Partial<SongLineElementType>) =>
+        onUpdate(patch as Partial<EditorElement>)
+      }
+      onUpdateData={(
+        updater: (element: SongLineElementType) => SongLineElementType
+      ) => onUpdateData<SongLineElementType>(updater)}
+      onAddCircleNumberAtPosition={onAddCircleNumberAtPosition}
+      onAddAttachedCircleNumberToSongLine={onAddAttachedCircleNumberToSongLine}
+      onAddAttachedVoltaToSongLine={onAddAttachedVoltaToSongLine}
+      onAddAttachedArrowToSongLine={onAddAttachedArrowToSongLine}
+      onAddAttachedRepeatEndToSongLine={onAddAttachedRepeatEndToSongLine}
+      onAddAttachedSmallSharpToSongLine={onAddAttachedSmallSharpToSongLine}
+    />
+  );
+}
 
   if (element.type === "tabBlock") {
     return (
@@ -144,6 +166,14 @@ onAddAttachedRepeatEndToSongLine={onAddAttachedRepeatEndToSongLine}      />
       />
     );
   }
+if (element.type === "image") {
+  return (
+    <ImageElementView
+      {...commonProps}
+      element={element as ImageElementType}
+    />
+  );
+}
 
 if (element.type === "symbol") {
   const symbolElement = element as SymbolElementType;

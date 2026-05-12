@@ -1,306 +1,10 @@
-// import type {
-//   PageJson,
-//   TabBlockElement as TabBlockElementType,
-//   TabNote,
-// } from "../types/editorDocument";
-// import {
-//   clamp,
-//   getElementFrameStyle,
-//   startElementDrag,
-//   startElementResize,
-//   stopEditorEvent,
-// } from "./elementViewUtils";
-
-// interface TabBlockElementProps {
-//   page: PageJson;
-//   element: TabBlockElementType;
-//   isSelected: boolean;
-//   onSelect: () => void;
-//   onMove: (x: number, y: number) => void;
-//   onResize: (width: number, height: number) => void;
-//   onUpdate: (patch: Partial<TabBlockElementType>) => void;
-//   onUpdateData: (updater: (element: TabBlockElementType) => TabBlockElementType) => void;
-//   onDelete: () => void;
-//   onDuplicate: () => void;
-// }
-
-// const MIN_WIDTH = 180;
-// const MIN_HEIGHT = 120;
-// const POSITION_STEP = 0.035;
-
-// function createId(prefix: string): string {
-//   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-//     return `${prefix}-${crypto.randomUUID()}`;
-//   }
-
-//   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-// }
-
-// function updateNote(
-//   notes: TabNote[],
-//   noteId: string,
-//   updater: (note: TabNote) => TabNote
-// ): TabNote[] {
-//   return notes.map((note) => (note.id === noteId ? updater(note) : note));
-// }
-
-// function shouldNotStartDrag(target: EventTarget | null): boolean {
-//   if (!(target instanceof HTMLElement)) {
-//     return false;
-//   }
-
-//   return Boolean(
-//     target.closest("input") ||
-//       target.closest("textarea") ||
-//       target.closest("button") ||
-//       target.closest(".tab-note-chip") ||
-//       target.closest(".tab-note-actions")
-//   );
-// }
-
-// export function TabBlockElement({
-//   page,
-//   element,
-//   isSelected,
-//   onSelect,
-//   onMove,
-//   onResize,
-//   onUpdateData,
-//   onDelete,
-//   onDuplicate,
-// }: TabBlockElementProps) {
-//   const data = element.data;
-//   const stringCount = Math.max(1, data.strings || 6);
-//   const lineSpacing = Math.max(12, data.lineSpacing || 18);
-//   const topPadding = 18;
-//   const tabHeight = topPadding * 2 + (stringCount - 1) * lineSpacing;
-
-//   function addNote() {
-//     const note: TabNote = {
-//       id: createId("tab-note"),
-//       stringIndex: 0,
-//       position: 0.2,
-//       value: "0",
-//     };
-
-//     onUpdateData((current) => ({
-//       ...current,
-//       data: {
-//         ...current.data,
-//         notes: [...current.data.notes, note],
-//       },
-//     }));
-//   }
-
-//   function deleteNote(noteId: string) {
-//     onUpdateData((current) => ({
-//       ...current,
-//       data: {
-//         ...current.data,
-//         notes: current.data.notes.filter((note) => note.id !== noteId),
-//       },
-//     }));
-//   }
-
-//   function updateNoteValue(noteId: string, value: string) {
-//     onUpdateData((current) => ({
-//       ...current,
-//       data: {
-//         ...current.data,
-//         notes: updateNote(current.data.notes, noteId, (note) => ({
-//           ...note,
-//           value,
-//         })),
-//       },
-//     }));
-//   }
-
-//   function moveNoteHorizontal(noteId: string, delta: number) {
-//     onUpdateData((current) => ({
-//       ...current,
-//       data: {
-//         ...current.data,
-//         notes: updateNote(current.data.notes, noteId, (note) => ({
-//           ...note,
-//           position: clamp(note.position + delta, 0, 1),
-//         })),
-//       },
-//     }));
-//   }
-
-//   function moveNoteVertical(noteId: string, delta: number) {
-//     onUpdateData((current) => ({
-//       ...current,
-//       data: {
-//         ...current.data,
-//         notes: updateNote(current.data.notes, noteId, (note) => ({
-//           ...note,
-//           stringIndex: clamp(note.stringIndex + delta, 0, stringCount - 1),
-//         })),
-//       },
-//     }));
-//   }
-
-//   return (
-//     <div
-//       className={`editor-element tab-block-element ${
-//         isSelected ? "editor-element-selected" : ""
-//       }`}
-//       style={getElementFrameStyle(element)}
-//       onMouseDown={(event) => {
-//         event.stopPropagation();
-//         onSelect();
-
-//         if (shouldNotStartDrag(event.target)) {
-//           return;
-//         }
-
-//         startElementDrag(event, {
-//           page,
-//           elementId: element.id,
-//           startX: event.clientX,
-//           startY: event.clientY,
-//           elementX: element.x,
-//           elementY: element.y,
-//           elementWidth: element.width,
-//           elementHeight: element.height,
-//           onMove,
-//         });
-//       }}
-//     >
-//       <div className="tab-block-content" style={{ height: tabHeight }}>
-//         {Array.from({ length: stringCount }).map((_, index) => (
-//           <div
-//             key={index}
-//             className="tab-string-line"
-//             style={{ top: topPadding + index * lineSpacing }}
-//           />
-//         ))}
-
-//         {data.notes.map((note) => (
-//           <div
-//             key={note.id}
-//             className="tab-note-chip"
-//             style={{
-//               left: `${note.position * 100}%`,
-//               top: topPadding + note.stringIndex * lineSpacing,
-//               fontSize: data.fontSize,
-//             }}
-//             onMouseDown={(event) => {
-//               event.stopPropagation();
-//               onSelect();
-//             }}
-//           >
-//             <input
-//               className="tab-note-input"
-//               value={note.value}
-//               onChange={(event) => updateNoteValue(note.id, event.target.value)}
-//               onMouseDown={(event) => event.stopPropagation()}
-//             />
-
-//             {isSelected ? (
-//               <span className="tab-note-actions">
-//                 <button
-//                   type="button"
-//                   onMouseDown={stopEditorEvent}
-//                   onClick={() => moveNoteHorizontal(note.id, -POSITION_STEP)}
-//                 >
-//                   ←
-//                 </button>
-//                 <button
-//                   type="button"
-//                   onMouseDown={stopEditorEvent}
-//                   onClick={() => moveNoteHorizontal(note.id, POSITION_STEP)}
-//                 >
-//                   →
-//                 </button>
-//                 <button
-//                   type="button"
-//                   onMouseDown={stopEditorEvent}
-//                   onClick={() => moveNoteVertical(note.id, -1)}
-//                 >
-//                   ↑
-//                 </button>
-//                 <button
-//                   type="button"
-//                   onMouseDown={stopEditorEvent}
-//                   onClick={() => moveNoteVertical(note.id, 1)}
-//                 >
-//                   ↓
-//                 </button>
-//                 <button
-//                   type="button"
-//                   className="danger"
-//                   onMouseDown={stopEditorEvent}
-//                   onClick={() => deleteNote(note.id)}
-//                 >
-//                   ×
-//                 </button>
-//               </span>
-//             ) : null}
-//           </div>
-//         ))}
-//       </div>
-
-//       {isSelected ? (
-//         <div className="tab-block-inline-toolbar">
-//           <button type="button" onMouseDown={stopEditorEvent} onClick={addNote}>
-//             + מספר
-//           </button>
-//         </div>
-//       ) : null}
-
-//       {isSelected ? (
-//         <div className="element-controls">
-//           <button
-//             type="button"
-//             className="element-control-button"
-//             onMouseDown={stopEditorEvent}
-//             onClick={onDuplicate}
-//           >
-//             שכפל
-//           </button>
-
-//           <button
-//             type="button"
-//             className="element-control-button danger"
-//             onMouseDown={stopEditorEvent}
-//             onClick={onDelete}
-//           >
-//             מחק
-//           </button>
-//         </div>
-//       ) : null}
-
-//       {isSelected ? (
-//         <button
-//           type="button"
-//           className="element-resize-handle"
-//           aria-label="שינוי גודל"
-//           onMouseDown={(event) => {
-//             startElementResize(event, {
-//               page,
-//               startX: event.clientX,
-//               startY: event.clientY,
-//               startWidth: element.width,
-//               startHeight: element.height,
-//               elementX: element.x,
-//               elementY: element.y,
-//               minWidth: MIN_WIDTH,
-//               minHeight: MIN_HEIGHT,
-//               onResize,
-//             });
-//           }}
-//         />
-//       ) : null}
-//     </div>
-//   );
-// }
-
-
-
+import { useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
-import type { PageJson, TabBlockElement as TabBlockElementType } from "../types/editorDocument";
+import type {
+  PageJson,
+  TabBlockElement as TabBlockElementType,
+  TabRepeatMark,
+} from "../types/editorDocument";
 import {
   getElementFrameStyle,
   startElementDrag,
@@ -324,6 +28,7 @@ interface TabBlockElementProps {
 const MIN_WIDTH = 260;
 const MIN_HEIGHT = 150;
 const DEFAULT_LINES = ["", "", "", "", "", ""];
+const REPEAT_POSITION_STEP = 0.01;
 
 function shouldNotStartDrag(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -382,7 +87,13 @@ function getTargetIndexFromClick(input: HTMLInputElement, eventClientX: number):
 const characterStepWidth = getCharacterStepWidth(input);
 
 return Math.max(0, Math.round(clickX / characterStepWidth));}
+function createId(prefix: string): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
 
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 export function TabBlockElement({
   page,
   element,
@@ -395,9 +106,13 @@ export function TabBlockElement({
   onDuplicate,
 }: TabBlockElementProps) {
   const data = element.data;
-  const lines = data.lines?.length === 6 ? data.lines : DEFAULT_LINES;
-  const tabNumber = data.tabNumber ?? "";
+const lines = data.lines?.length === 6 ? data.lines : DEFAULT_LINES;
+const tabNumber = data.tabNumber ?? "";
+const repeatMarks = data.repeatMarks ?? [];
 
+const [selectedRepeatMarkId, setSelectedRepeatMarkId] = useState<string | null>(
+  null
+);
   function updateLine(lineIndex: number, value: string) {
     onUpdateData((current) => {
       const currentLines =
@@ -424,6 +139,102 @@ export function TabBlockElement({
       },
     }));
   }
+  function addRepeatMark(type: TabRepeatMark["type"]) {
+  const mark: TabRepeatMark = {
+    id: createId("tab-repeat"),
+    type,
+    position: type === "repeatStart" ? 0.08 : 0.92,
+  };
+
+  onUpdateData((current) => ({
+    ...current,
+    data: {
+      ...current.data,
+      repeatMarks: [...(current.data.repeatMarks ?? []), mark],
+    },
+  }));
+
+  setSelectedRepeatMarkId(mark.id);
+}
+
+function deleteRepeatMark(markId: string) {
+  onUpdateData((current) => ({
+    ...current,
+    data: {
+      ...current.data,
+      repeatMarks: (current.data.repeatMarks ?? []).filter(
+        (mark) => mark.id !== markId
+      ),
+    },
+  }));
+
+  setSelectedRepeatMarkId(null);
+}
+function duplicateRepeatMark(markId: string) {
+  let duplicatedId: string | null = null;
+
+  onUpdateData((current) => {
+    const marks = current.data.repeatMarks ?? [];
+    const sourceMark = marks.find((mark) => mark.id === markId);
+
+    if (!sourceMark) {
+      return current;
+    }
+
+    const duplicatedMark: TabRepeatMark = {
+      ...sourceMark,
+      id: createId("tab-repeat"),
+      position: Math.max(0, Math.min(1, sourceMark.position + 0.04)),
+    };
+
+    duplicatedId = duplicatedMark.id;
+
+    return {
+      ...current,
+      data: {
+        ...current.data,
+        repeatMarks: [...marks, duplicatedMark],
+      },
+    };
+  });
+
+  if (duplicatedId) {
+    setSelectedRepeatMarkId(duplicatedId);
+  }
+}
+function moveRepeatMark(markId: string, delta: number) {
+  onUpdateData((current) => ({
+    ...current,
+    data: {
+      ...current.data,
+      repeatMarks: (current.data.repeatMarks ?? []).map((mark) =>
+        mark.id === markId
+          ? {
+              ...mark,
+              position: Math.max(0, Math.min(1, mark.position + delta)),
+            }
+          : mark
+      ),
+    },
+  }));
+}
+
+function handleRepeatMarkKeyDown(
+  event: KeyboardEvent<HTMLDivElement>,
+  markId: string
+) {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const direction = event.key === "ArrowLeft" ? -1 : 1;
+  const multiplier = event.shiftKey ? 5 : 1;
+
+  moveRepeatMark(markId, direction * REPEAT_POSITION_STEP * multiplier);
+}
 
   function placeCaretInTabLine(
     event: MouseEvent<HTMLInputElement>,
@@ -460,15 +271,21 @@ export function TabBlockElement({
       }`}
       
       style={getElementFrameStyle(element)}
-      onMouseDown={(event) => {
-        event.stopPropagation();
-        onSelect();
+     onMouseDown={(event) => {
+  event.stopPropagation();
+  onSelect();
 
-        if (shouldNotStartDrag(event.target)) {
-          return;
-        }
+  if (event.target instanceof HTMLElement) {
+    if (!event.target.closest(".tab-repeat-mark")) {
+      setSelectedRepeatMarkId(null);
+    }
+  }
 
-        startElementDrag(event, {
+  if (shouldNotStartDrag(event.target)) {
+    return;
+  }
+
+  startElementDrag(event, {
           page,
           elementId: element.id,
           startX: event.clientX,
@@ -555,27 +372,34 @@ onMouseDown={(event) => {
   </div>
 ) : null}
 
-{isSelected && !tabNumber ? (
-  <button
-    type="button"
-    onMouseDown={stopEditorEvent}
-    onClick={() => updateTabNumber("1")}
-    style={{
-      position: "absolute",
-      top: -28,
-      right: 4,
-      zIndex: 20,
-      height: 24,
-      padding: "0 8px",
-      border: "1px solid #cbd5e1",
-      borderRadius: 6,
-      background: "#ffffff",
-      fontSize: 12,
-      cursor: "pointer",
-    }}
-  >
-    + מספר
-  </button>
+{isSelected ? (
+  <div className="song-line-inline-toolbar guitar-tab-inline-toolbar">
+    {!tabNumber ? (
+      <button
+        type="button"
+        onMouseDown={stopEditorEvent}
+        onClick={() => updateTabNumber("1")}
+      >
+        + מספר
+      </button>
+    ) : null}
+
+    <button
+      type="button"
+      onMouseDown={stopEditorEvent}
+      onClick={() => addRepeatMark("repeatStart")}
+    >
+      + פתיחה
+    </button>
+
+    <button
+      type="button"
+      onMouseDown={stopEditorEvent}
+      onClick={() => addRepeatMark("repeatEnd")}
+    >
+      + סגירה
+    </button>
+  </div>
 ) : null}
 
   <div
@@ -615,6 +439,193 @@ onMouseDown={(event) => {
       borderRight: "2px solid #111827",
     }}
   >
+    {repeatMarks.map((mark) => {
+  const isRepeatMarkSelected =
+    isSelected && selectedRepeatMarkId === mark.id;
+
+  const isStart = mark.type === "repeatStart";
+
+  return (
+    <div
+      key={mark.id}
+      className={`tab-repeat-mark ${
+        isStart ? "tab-repeat-mark-start" : "tab-repeat-mark-end"
+      } ${isRepeatMarkSelected ? "tab-repeat-mark-selected" : ""}`}
+      tabIndex={0}
+      style={{
+        position: "absolute",
+        left: `${mark.position * 100}%`,
+        top: 0,
+        height: 120,
+        width: 22,
+        transform: "translateX(-50%)",
+        zIndex: 6,
+        color: "#111827",
+        display: "flex",
+        alignItems: "stretch",
+        justifyContent: "center",
+        pointerEvents: "auto",
+        cursor: "pointer",
+        outline: isRepeatMarkSelected ? "1px dashed #2563eb" : "none",
+      }}
+   onMouseDown={(event) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  onSelect();
+  setSelectedRepeatMarkId(mark.id);
+
+  const target = event.currentTarget;
+
+  requestAnimationFrame(() => {
+    target.focus();
+  });
+}}
+      onKeyDown={(event) => handleRepeatMarkKeyDown(event, mark.id)}
+    >
+     {isStart ? (
+  <>
+    <span
+      style={{
+        width: 4,
+        height: "100%",
+        background: "#111827",
+        display: "block",
+      }}
+    />
+
+    <span
+      style={{
+        width: 2,
+        height: "100%",
+        background: "#111827",
+        display: "block",
+        marginLeft: 3,
+      }}
+    />
+
+    <span
+      style={{
+        position: "absolute",
+        left: 16,
+        top: 38,
+        display: "flex",
+        flexDirection: "column",
+        gap: 18,
+        zIndex: 31,
+      }}
+    >
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 999,
+          background: "#111827",
+          display: "block",
+        }}
+      />
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 999,
+          background: "#111827",
+          display: "block",
+        }}
+      />
+    </span>
+  </>
+) : (
+  <>
+    <span
+      style={{
+        position: "absolute",
+        right: 16,
+        top: 38,
+        display: "flex",
+        flexDirection: "column",
+        gap: 18,
+        zIndex: 31,
+      }}
+    >
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 999,
+          background: "#111827",
+          display: "block",
+        }}
+      />
+      <span
+        style={{
+          width: 7,
+          height: 7,
+          borderRadius: 999,
+          background: "#111827",
+          display: "block",
+        }}
+      />
+    </span>
+
+    <span
+      style={{
+        width: 2,
+        height: "100%",
+        background: "#111827",
+        display: "block",
+        marginRight: 3,
+      }}
+    />
+
+    <span
+      style={{
+        width: 4,
+        height: "100%",
+        background: "#111827",
+        display: "block",
+      }}
+    />
+  </>
+)}
+
+   {isRepeatMarkSelected ? (
+  <span
+    className="element-controls tab-repeat-actions"
+    style={{
+      position: "absolute",
+      top: -38,
+      left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 100,
+      display: "flex",
+      gap: 6,
+      direction: "rtl",
+      whiteSpace: "nowrap",
+    }}
+  >
+    <button
+      type="button"
+      className="element-control-button"
+      onMouseDown={stopEditorEvent}
+      onClick={() => duplicateRepeatMark(mark.id)}
+    >
+      שכפל
+    </button>
+
+    <button
+      type="button"
+      className="element-control-button danger"
+      onMouseDown={stopEditorEvent}
+      onClick={() => deleteRepeatMark(mark.id)}
+    >
+      מחק
+    </button>
+  </span>
+) : null}
+    </div>
+  );
+})}
     {lines.map((line, index) => (
       <div
         className="guitar-tab-row"

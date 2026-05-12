@@ -1126,5 +1126,210 @@ button.danger,
     background: transparent !important;
   }
 }
+.tab-repeat-mark {
+  position: absolute;
+  width: 18px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  z-index: 8;
+  outline: none;
+}
 
+.tab-repeat-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #111827;
+}
+
+.tab-repeat-line-thick {
+  width: 4px;
+}
+
+.tab-repeat-line-thin {
+  width: 2px;
+}
+
+.tab-repeat-mark-start .tab-repeat-line-thick {
+  left: 0;
+}
+
+.tab-repeat-mark-start .tab-repeat-line-thin {
+  left: 8px;
+}
+
+.tab-repeat-mark-end .tab-repeat-line-thin {
+  left: 0;
+}
+
+.tab-repeat-mark-end .tab-repeat-line-thick {
+  left: 8px;
+}
+
+.tab-repeat-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #111827;
+}
+
+.tab-repeat-mark-start .tab-repeat-dot {
+  left: 15px;
+}
+
+.tab-repeat-mark-end .tab-repeat-dot {
+  left: -10px;
+}
+
+.tab-repeat-dot-top {
+  top: 34px;
+}
+
+.tab-repeat-dot-bottom {
+  top: 58px;
+}
+
+.tab-repeat-mark-selected::after {
+  content: "";
+  position: absolute;
+  inset: -5px -7px;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.tab-repeat-actions {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  display: flex;
+  gap: 2px;
+  transform: translateX(-50%);
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 2px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+}
+
+.tab-repeat-actions button {
+  border: 0;
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tab-repeat-actions .danger {
+  color: #dc2626;
+}
+.guitar-tab-inline-toolbar {
+  position: absolute;
+  top: -42px;
+  right: 70px;
+  left: auto;
+  z-index: 30;
+}
+.tab-repeat-mark {
+  color: #111827;
+}
+
+.tab-repeat-line {
+  display: block;
+  background: currentColor;
+  height: 100%;
+}
+
+.tab-repeat-line-thick {
+  width: 4px;
+}
+
+.tab-repeat-line-thin {
+  width: 2px;
+  margin-inline-start: 2px;
+}
+
+.tab-repeat-dots {
+  position: absolute;
+  top: 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tab-repeat-mark-start .tab-repeat-dots {
+  left: 13px;
+}
+
+.tab-repeat-mark-end .tab-repeat-dots {
+  right: 13px;
+}
+
+.tab-repeat-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  display: block;
+}
+
+.tab-repeat-actions {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+}
+
+.tab-repeat-actions button {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #dc2626;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #dc2626;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.tab-repeat-line {
+  display: block;
+  height: 100%;
+  background: currentColor;
+}
+
+.tab-repeat-line-thick {
+  width: 4px;
+}
+
+.tab-repeat-line-thin {
+  width: 2px;
+  margin-inline-start: 3px;
+}
+
+.tab-repeat-dots {
+  position: absolute;
+  top: 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tab-repeat-mark-start .tab-repeat-dots {
+  left: 16px;
+}
+
+.tab-repeat-mark-end .tab-repeat-dots {
+  right: 16px;
+}
+
+.tab-repeat-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  display: block;
+}
 }
