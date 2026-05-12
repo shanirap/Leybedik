@@ -1,0 +1,153 @@
+.scan-import-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  direction: rtl;
+}
+
+.scan-import-dialog {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 100%;
+  max-height: min(90vh, 720px);
+  overflow: auto;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+  padding: 24px 22px 20px;
+  box-sizing: border-box;
+}
+
+.scan-import-dialog h2 {
+  margin: 0 0 10px;
+  font-size: 1.35rem;
+  color: #1a1a1a;
+}
+
+.scan-import-lead {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #555;
+}
+
+.scan-import-file-row {
+  margin-bottom: 14px;
+}
+
+.scan-import-file-input {
+  font-size: 14px;
+  width: 100%;
+}
+
+.scan-import-meta {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 14px;
+  word-break: break-all;
+}
+
+.scan-import-preview-wrap {
+  margin-bottom: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f4f4f4;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scan-import-preview-img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+}
+
+.scan-import-pdf-placeholder {
+  padding: 28px 16px;
+  text-align: center;
+  color: #444;
+  font-weight: 600;
+}
+
+.scan-import-warnings {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  background: #fffbf0;
+  border: 1px solid #e8d89c;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #5c4a12;
+}
+
+.scan-import-warnings ul {
+  margin: 8px 0 0;
+  padding-inline-start: 20px;
+}
+
+.scan-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+
+.scan-import-btn-primary {
+  background: #d4af37;
+  border: none;
+  color: #111;
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.scan-import-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.scan-import-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.scan-import-btn-secondary {
+  background: transparent;
+  border: 1px solid #bbb;
+  color: #333;
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.scan-import-btn-secondary:hover {
+  background: #f5f5f5;
+}
+
+.scan-import-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #fff0f0;
+  border: 1px solid #f0b4b4;
+  border-radius: 8px;
+  color: #8b1a1a;
+  font-size: 13px;
+}
+
+.scan-import-loading {
+  text-align: center;
+  padding: 16px;
+  color: #555;
+  font-weight: 600;
+}
