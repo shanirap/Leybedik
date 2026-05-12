@@ -124,6 +124,8 @@ export interface TabRepeatMark {
   position: number;
 }
 
+export type TabInstrument = "guitar" | "violin";
+
 export interface TabBlockElement extends BaseElement {
   type: "tabBlock";
   data: {
@@ -132,7 +134,8 @@ export interface TabBlockElement extends BaseElement {
     notes: TabNote[]; // legacy
     fontSize: number;
 
-    // New guitar tab model
+    // New tab model
+    instrument?: TabInstrument;
     lines?: string[];
     tabNumber?: string;
     repeatMarks?: TabRepeatMark[];

@@ -25,21 +25,23 @@ export function isEditorDocumentContent(value: unknown): value is EditorDocument
  * The active editor no longer serializes from DOM.
  * This still accepts old arguments so old tests/imports compile.
  */
-export function extractDocumentJson(_root?: HTMLElement | null): EditorDocumentContent {
+export function extractDocumentJson(root?: HTMLElement | null): EditorDocumentContent {
+  void root;
   return createEmptyEditorContent();
 }
-
 /**
  * Legacy compatibility helper.
  * The active editor no longer renders by manually creating DOM.
  * This still accepts old arguments so old tests/imports compile.
  */
 export function renderDocumentFromJson(
-  _content?: EditorDocumentContent,
-  _root?: HTMLElement | null,
-  _doc?: Document
+  content?: EditorDocumentContent,
+  root?: HTMLElement | null,
+  doc?: Document
 ): void {
-  // Intentionally empty for backward-compatible imports.
+  void content;
+  void root;
+  void doc;
 }
 
 export function parseEditorDocumentContent(value: unknown): EditorDocumentContent {

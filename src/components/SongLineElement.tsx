@@ -579,7 +579,7 @@ startElementDrag(event, {
           page.id,
           element.id,
           20,
-          18,
+          isGuitar ? 0 : 18,
           90,
           28
         );

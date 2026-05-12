@@ -4,7 +4,6 @@ interface EditorToolbarProps {
   onAddSongLine: () => void;
   onAddTabBlock: () => void;
   onAddRepeatEnd: () => void;
-  // onAddSharp: () => void;
   onAddArrow: () => void;
   onAddCircleNumber: () => void;
   onAddFraction: () => void;
@@ -12,7 +11,8 @@ interface EditorToolbarProps {
   onPrint: () => void;
   onAddPage: () => void;
   onAddGuitarSongLine: () => void;
-   onAddImage: () => void;
+  onAddImage: () => void;
+  onAddViolinTabBlock: () => void;
 }
 
 export function EditorToolbar({
@@ -21,15 +21,15 @@ export function EditorToolbar({
   onAddSongLine,
   onAddTabBlock,
   onAddRepeatEnd,
-  // onAddSharp,
   onAddArrow,
   onAddCircleNumber,
-onAddFraction,
- onAddVolta,
- onPrint,
-onAddPage,
-onAddGuitarSongLine,
-onAddImage,
+  onAddFraction,
+  onAddVolta,
+  onPrint,
+  onAddPage,
+  onAddGuitarSongLine,
+  onAddImage,
+  onAddViolinTabBlock,
 }: EditorToolbarProps) {
   return (
     <aside className="editor-toolbar" aria-label="כלי עריכה">
@@ -84,7 +84,9 @@ onAddImage,
           + טאבים
         </button>
       </ToolbarSection>
-
+<ToolbarSection title="כינור">
+  <button type="button" className="toolbar-button"  onClick={onAddViolinTabBlock}>+ טאב כינור</button>
+  </ToolbarSection>
       <ToolbarSection title="תופים">
         <div className="toolbar-placeholder">בקרוב</div>
       </ToolbarSection>

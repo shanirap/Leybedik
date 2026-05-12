@@ -4207,11 +4207,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\משתמש\\Desktop\\‏‏leybedik1\\server\\Leybedik.Api\\Leybedik.Api.csproj",
+      "projectUniqueName": "C:\\Users\\משתמש\\Desktop\\leyb\\server\\Leybedik.Api\\Leybedik.Api.csproj",
       "projectName": "Leybedik.Api",
-      "projectPath": "C:\\Users\\משתמש\\Desktop\\‏‏leybedik1\\server\\Leybedik.Api\\Leybedik.Api.csproj",
+      "projectPath": "C:\\Users\\משתמש\\Desktop\\leyb\\server\\Leybedik.Api\\Leybedik.Api.csproj",
       "packagesPath": "C:\\Users\\משתמש\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\משתמש\\Desktop\\‏‏leybedik1\\server\\Leybedik.Api\\obj\\",
+      "outputPath": "C:\\Users\\משתמש\\Desktop\\leyb\\server\\Leybedik.Api\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

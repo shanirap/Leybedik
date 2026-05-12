@@ -89,6 +89,19 @@ onDropElement: (
 ) => void;
 }
 
+function PageFixedBlank() {
+  return (
+    <div className="page-fixed-blank" aria-hidden="true">
+      <img
+        className="page-fixed-blank-image"
+        src="/assets/blank-page.png"
+        alt=""
+        draggable={false}
+      />
+    </div>
+  );
+}
+
 export function PageView({
   page,
   pageIndex,
@@ -128,6 +141,7 @@ export function PageView({
           }
         }}
       >
+        <PageFixedBlank />
         {page.elements.map((element) => (
           <ElementRenderer
             key={element.id}

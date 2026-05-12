@@ -138,91 +138,72 @@ function reorderTemplateElementByTargetY(
     }),
   };
 }
-// function reorderSongLineByTargetY(
-//   page: PageJson,
-//   elementId: string,
-//   targetY: number
-// ): PageJson {
-//   const songLines = page.elements
-//     .filter((element) => element.type === "songLine")
-//     .sort((a, b) => a.y - b.y);
 
-//   const draggedIndex = songLines.findIndex((element) => element.id === elementId);
+const MAX_EMBEDDED_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const MAX_EMBEDDED_IMAGE_DIMENSION = 1400;
+const EMBEDDED_IMAGE_QUALITY = 0.78;
 
-//   if (draggedIndex === -1) {
-//     return page;
-//   }
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-//   const draggedElement = songLines[draggedIndex];
+    reader.onload = () => {
+      const result = reader.result;
 
-//   const targetIndex = Math.max(
-//     0,
-//     Math.min(
-//       songLines.length - 1,
-//       Math.round((targetY - SONG_LINE_START_Y) / (SONG_LINE_HEIGHT + SONG_LINE_GAP))
-//     )
-//   );
+      if (typeof result !== "string") {
+        reject(new Error("לא הצלחתי לקרוא את התמונה."));
+        return;
+      }
 
-//   if (targetIndex === draggedIndex) {
-//     return layoutSongLinesOnPage(page);
-//   }
+      resolve(result);
+    };
 
-//   const reorderedSongLines = [...songLines];
-//   reorderedSongLines.splice(draggedIndex, 1);
-//   reorderedSongLines.splice(targetIndex, 0, draggedElement);
+    reader.onerror = () => {
+      reject(new Error("לא הצלחתי לקרוא את התמונה."));
+    };
 
-//   const orderById = new Map<string, number>();
+    reader.readAsDataURL(file);
+  });
+}
 
-//   reorderedSongLines.forEach((element, index) => {
-//     orderById.set(element.id, index);
-//   });
+function loadImageElement(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
 
-//   const nextPage: PageJson = {
-//     ...page,
-//     elements: page.elements.map((element) => {
-//       if (element.type !== "songLine") {
-//         return element;
-//       }
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("לא הצלחתי לטעון את התמונה."));
 
-//       const index = orderById.get(element.id) ?? 0;
+    image.src = src;
+  });
+}
 
-//       return {
-//         ...element,
-//         x: PAGE_CONTENT_MARGIN_X,
-//         y: SONG_LINE_START_Y + index * (SONG_LINE_HEIGHT + SONG_LINE_GAP),
-//         width: Math.max(240, page.width - SONG_LINE_WIDTH_PADDING),
-//         height: SONG_LINE_HEIGHT,
-//       };
-//     }),
-//   };
+async function compressImageFileToDataUrl(file: File): Promise<string> {
+  const originalDataUrl = await readFileAsDataUrl(file);
+  const image = await loadImageElement(originalDataUrl);
 
-//   return nextPage;
-// }
+  const largestSide = Math.max(image.naturalWidth, image.naturalHeight);
+  const scale =
+    largestSide > MAX_EMBEDDED_IMAGE_DIMENSION
+      ? MAX_EMBEDDED_IMAGE_DIMENSION / largestSide
+      : 1;
 
+  const targetWidth = Math.max(1, Math.round(image.naturalWidth * scale));
+  const targetHeight = Math.max(1, Math.round(image.naturalHeight * scale));
 
-// function getNextSongLinePosition(page: PageJson) {
-//   const songLines = page.elements
-//     .filter((element) => element.type === "songLine")
-//     .sort((a, b) => a.y - b.y);
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
 
-//   const x = PAGE_CONTENT_MARGIN_X;
-//   const width = Math.max(240, page.width - SONG_LINE_WIDTH_PADDING);
+  const context = canvas.getContext("2d");
 
-//   const nextY =
-//     songLines.length === 0
-//       ? SONG_LINE_START_Y
-//       : songLines[songLines.length - 1].y + SONG_LINE_HEIGHT + SONG_LINE_GAP;
+  if (!context) {
+    throw new Error("הדפדפן לא הצליח לעבד את התמונה.");
+  }
 
-//   const maxY = page.height - SONG_LINE_HEIGHT - 40;
+  context.drawImage(image, 0, 0, targetWidth, targetHeight);
 
-//   return {
-//     x,
-//     y: Math.min(nextY, maxY),
-//     width,
-//     height: SONG_LINE_HEIGHT,
-//   };
-// }
-
+  return canvas.toDataURL("image/jpeg", EMBEDDED_IMAGE_QUALITY);
+}
 
 function createId(prefix: string): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -605,21 +586,19 @@ const findSongLineIdAtPoint = useCallback(
   []
 );
 const handleImageFileSelected = useCallback(
-  (file: File) => {
+  async (file: File) => {
     if (!file.type.startsWith("image/")) {
       alert("אפשר להעלות קובץ תמונה בלבד.");
       return;
     }
 
-    const reader = new FileReader();
+    if (file.size > MAX_EMBEDDED_IMAGE_SIZE_BYTES) {
+      alert("התמונה גדולה מדי. בחרי תמונה עד 8MB.");
+      return;
+    }
 
-    reader.onload = () => {
-      const src = String(reader.result ?? "");
-
-      if (!src) {
-        alert("לא הצלחתי לקרוא את התמונה.");
-        return;
-      }
+    try {
+      const src = await compressImageFileToDataUrl(file);
 
       const pageId = activePageId ?? editorStateRef.current.pages[0]?.id;
 
@@ -627,9 +606,9 @@ const handleImageFileSelected = useCallback(
         return;
       }
 
-      const imageElement = {
+      const imageElement: EditorElement = {
         id: createId("image"),
-        type: "image" as const,
+        type: "image",
         x: 80,
         y: 100,
         width: 260,
@@ -655,9 +634,9 @@ const handleImageFileSelected = useCallback(
 
       setActivePageId(pageId);
       setSelectedElementId(imageElement.id);
-    };
-
-    reader.readAsDataURL(file);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "טעינת התמונה נכשלה.");
+    }
   },
   [activePageId, updateDocumentState]
 );
@@ -979,6 +958,8 @@ const addTabBlock = useCallback(() => {
       fontSize: 24,
       lines: ["", "", "", "", "", ""],
       tabNumber: "",
+      instrument: "guitar",
+      repeatMarks: [],
     },
   };
 
@@ -996,6 +977,53 @@ const addTabBlock = useCallback(() => {
 
   setSelectedElementId(element.id);
 }, [activePageId, updateDocumentState]);
+
+const addViolinTabBlock = useCallback(() => {
+  const pageId = activePageId;
+  const page = editorStateRef.current.pages.find((p) => p.id === pageId);
+
+  if (!page) {
+    return;
+  }
+
+  const position = getNextTemplateElementPosition(page);
+
+  const element: TabBlockElement = {
+    id: createId("violin-tab-block"),
+    type: "tabBlock",
+    x: position.x,
+    y: position.y,
+    width: TEMPLATE_WIDTH,
+    height: 130,
+    zIndex: getNextZIndex(editorStateRef.current),
+    data: {
+      instrument: "violin",
+      strings: 4,
+      lineSpacing: 18,
+      notes: [],
+      fontSize: 20,
+      lines: ["", "", "", ""],
+      tabNumber: "",
+      repeatMarks: [],
+    },
+  };
+
+  updateDocumentState((current) => ({
+    ...current,
+    pages: current.pages.map((page) =>
+      page.id === pageId
+        ? {
+            ...page,
+            elements: [...page.elements, element],
+          }
+        : page
+    ),
+  }));
+
+  setSelectedElementId(element.id);
+}, [activePageId, updateDocumentState]);
+
+
   const addRepeatEndSymbol = useCallback(() => {
     const zIndex = getNextZIndex(editorStateRef.current);
 
@@ -1672,7 +1700,6 @@ const addImage = useCallback(() => {
           onAddSongLine={addSongLine}
           onAddTabBlock={addTabBlock}
           onAddRepeatEnd={addRepeatEndSymbol}
-          // onAddSharp={addSharpMarkToSelectedSongLine}
           onAddArrow={addArrowSymbol}
           onAddCircleNumber={addCircleNumberSymbol}
           onAddFraction={addFractionSymbol}
@@ -1681,6 +1708,7 @@ const addImage = useCallback(() => {
           onAddPage={addPage}
           onAddGuitarSongLine={addGuitarSongLine}
           onAddImage={addImage}
+          onAddViolinTabBlock={addViolinTabBlock}
         />
 
         <main className="studio-main">

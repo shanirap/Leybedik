@@ -105,8 +105,12 @@ export function TabBlockElement({
   onDelete,
   onDuplicate,
 }: TabBlockElementProps) {
-  const data = element.data;
-const lines = data.lines?.length === 6 ? data.lines : DEFAULT_LINES;
+const data = element.data;
+const isViolin = data.instrument === "violin";
+const lineCount = isViolin ? 4 : 6;
+const defaultLines = isViolin ? ["", "", "", ""] : DEFAULT_LINES;
+
+const lines = data.lines?.length === lineCount ? data.lines : defaultLines;
 const tabNumber = data.tabNumber ?? "";
 const repeatMarks = data.repeatMarks ?? [];
 
@@ -115,8 +119,14 @@ const [selectedRepeatMarkId, setSelectedRepeatMarkId] = useState<string | null>(
 );
   function updateLine(lineIndex: number, value: string) {
     onUpdateData((current) => {
-      const currentLines =
-        current.data.lines?.length === 6 ? current.data.lines : DEFAULT_LINES;
+const currentIsViolin = current.data.instrument === "violin";
+const currentLineCount = currentIsViolin ? 4 : 6;
+const currentDefaultLines = currentIsViolin ? ["", "", "", ""] : DEFAULT_LINES;
+
+const currentLines =
+  current.data.lines?.length === currentLineCount
+    ? current.data.lines
+    : currentDefaultLines;
 
       return {
         ...current,
@@ -402,6 +412,30 @@ onMouseDown={(event) => {
   </div>
 ) : null}
 
+  {isViolin ? (
+  <div
+    className="violin-tab-clef"
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      left: 0,
+      top: 22,
+      width: 44,
+      height: 90,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 54,
+      lineHeight: 1,
+      fontFamily: "serif",
+      color: "#111827",
+      zIndex: 2,
+      pointerEvents: "none",
+    }}
+  >
+    𝄞
+  </div>
+) : (
   <div
     className="guitar-tab-left-labels"
     aria-hidden="true"
@@ -426,19 +460,21 @@ onMouseDown={(event) => {
     <span>A</span>
     <span>B</span>
   </div>
+)}
 
-  <div
-    className="guitar-tab-main"
-    style={{
-      position: "absolute",
-      left: 48,
-      right: 0,
-      top: 26,
-      height: 120,
-      borderLeft: "4px solid #111827",
-      borderRight: "2px solid #111827",
-    }}
-  >
+ <div
+  className="guitar-tab-main"
+  style={{
+    position: "absolute",
+    left: isViolin ? 44 : 48,
+    right: 0,
+    top: isViolin ? 34 : 26,
+    height: isViolin ? 72 : 120,
+    borderLeft: "4px solid #111827",
+    borderRight: "2px solid #111827",
+    overflow: "visible",
+  }}
+>
     {repeatMarks.map((mark) => {
   const isRepeatMarkSelected =
     isSelected && selectedRepeatMarkId === mark.id;
@@ -456,7 +492,7 @@ onMouseDown={(event) => {
         position: "absolute",
         left: `${mark.position * 100}%`,
         top: 0,
-        height: 120,
+        height: isViolin ? 72 : 120,
         width: 22,
         transform: "translateX(-50%)",
         zIndex: 6,
@@ -508,10 +544,10 @@ onMouseDown={(event) => {
       style={{
         position: "absolute",
         left: 16,
-        top: 38,
+        top: isViolin ? 20 : 38,
         display: "flex",
         flexDirection: "column",
-        gap: 18,
+        gap: isViolin ? 10 : 18,
         zIndex: 31,
       }}
     >
@@ -541,10 +577,10 @@ onMouseDown={(event) => {
       style={{
         position: "absolute",
         right: 16,
-        top: 38,
+        top: isViolin ? 20 : 38,
         display: "flex",
         flexDirection: "column",
-        gap: 18,
+        gap: isViolin ? 10 : 18,
         zIndex: 31,
       }}
     >
@@ -589,7 +625,7 @@ onMouseDown={(event) => {
   </>
 )}
 
-   {isRepeatMarkSelected ? (
+   {/* {isRepeatMarkSelected ? (
   <span
     className="element-controls tab-repeat-actions"
     style={{
@@ -622,17 +658,69 @@ onMouseDown={(event) => {
       מחק
     </button>
   </span>
+) : null} */}
+{isRepeatMarkSelected ? (
+  <span className="tab-repeat-actions">
+    <button
+      type="button"
+      className="element-control-button"
+      onMouseDown={stopEditorEvent}
+      onClick={() => duplicateRepeatMark(mark.id)}
+    >
+      שכפל
+    </button>
+
+    <button
+      type="button"
+      className="element-control-button danger"
+      onMouseDown={stopEditorEvent}
+      onClick={() => deleteRepeatMark(mark.id)}
+    >
+      מחק
+    </button>
+  </span>
 ) : null}
     </div>
   );
 })}
+{isViolin ? (
+  <>
+    <span
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        left: "33.333%",
+        top: 0,
+        width: 2,
+        height: "100%",
+        background: "#111827",
+        zIndex: 1,
+        pointerEvents: "none",
+      }}
+    />
+    <span
+      aria-hidden="true"
+      style={{
+        position: "absolute",
+        left: "66.666%",
+        top: 0,
+        width: 2,
+        height: "100%",
+        background: "#111827",
+        zIndex: 1,
+        pointerEvents: "none",
+      }}
+    />
+  </>
+) : null}
+
     {lines.map((line, index) => (
       <div
         className="guitar-tab-row"
         key={index}
         style={{
           position: "relative",
-          height: 20,
+          height: isViolin ? 18 : 20,
           borderTop: "2px solid #111827",
           borderBottom: index === lines.length - 1 ? "2px solid #111827" : undefined,
           boxSizing: "border-box",
@@ -650,18 +738,18 @@ onMouseDown={(event) => {
             boxSizing: "border-box",
             position: "absolute",
             left: 0,
-            top: -14,
+            top: isViolin ? -13 : -14,
             width: "100%",
-            height: 28,
+            height:  isViolin ? 26 : 28,
             padding: "0 8px",
             background: "transparent",
             fontFamily: '"Courier New", monospace',
-            fontSize: 24,
+            fontSize: isViolin ? 19 : 24,
             fontWeight: 700,
             color: "#111827",
             direction: "ltr",
             textAlign: "left",
-            letterSpacing: 4,
+            letterSpacing: isViolin ? 3 : 4,
             cursor: "text",
             zIndex: 2,
           }}
