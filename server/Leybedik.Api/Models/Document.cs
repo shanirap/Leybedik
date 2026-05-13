@@ -16,6 +16,10 @@ public class Document
   public string Title { get; set; } = string.Empty;
 
   [Required]
+  [MaxLength(50)]
+  public string Folder { get; set; } = "general";
+  
+  [Required]
   [Column(TypeName = "nvarchar(max)")]
   public string ContentJson { get; set; } = "{}";
 

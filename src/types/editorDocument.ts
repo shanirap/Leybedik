@@ -103,6 +103,7 @@ export interface SongLineElement extends BaseElement {
     inlineMarks?: SongInlineMark[];
     chordFontSize: number;
     chordColor: string;
+    chordFontFamily?: string;
     chordLines?: {
   aboveTop?: string;
   aboveBottom?: string;
@@ -139,6 +140,7 @@ export interface TabBlockElement extends BaseElement {
     lines?: string[];
     tabNumber?: string;
     repeatMarks?: TabRepeatMark[];
+    showMeasureLines?: boolean;
   };
 }
 

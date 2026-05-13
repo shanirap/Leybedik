@@ -1,4 +1,5 @@
-import type { SavedDocument } from "../types/savedDocument";
+import type { SavedDocument, DocumentFolder } from "../types/savedDocument";
+import { normalizeDocumentFolder } from "../types/savedDocument";
 import type { EditorDocumentContent } from "../types/editorDocument";
 import {
   createEmptyEditorContent,
@@ -9,6 +10,7 @@ import { apiRequest, readApiError } from "./client";
 interface DocumentDto {
   id: number;
   title: string;
+  folder?: DocumentFolder | string | null;
   contentJson: string;
   createdAt: string;
   updatedAt: string;
@@ -17,6 +19,7 @@ interface DocumentDto {
 interface DocumentListItemDto {
   id: number;
   title: string;
+  folder?: DocumentFolder | string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -45,6 +48,7 @@ function mapDtoToSaved(dto: DocumentDto): SavedDocument {
     contentJson: parseContentJson(dto.contentJson),
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
+    folder: normalizeDocumentFolder(dto.folder),
   };
 }
 
@@ -60,6 +64,7 @@ export async function getDocuments(): Promise<SavedDocument[]> {
     contentJson: createEmptyEditorContent(),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
+    folder: normalizeDocumentFolder(item.folder),
   }));
 }
 
@@ -81,6 +86,7 @@ export async function createDocument(
     method: "POST",
     body: JSON.stringify({
       title,
+      folder: document.folder ?? "general",
       contentJson: JSON.stringify(document.contentJson),
     }),
   });
@@ -100,6 +106,7 @@ export async function updateDocument(
     method: "PUT",
     body: JSON.stringify({
       title,
+      folder: document.folder ?? "general",
       contentJson: JSON.stringify(document.contentJson),
     }),
   });

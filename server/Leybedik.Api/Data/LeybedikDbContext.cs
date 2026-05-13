@@ -24,6 +24,7 @@ public class LeybedikDbContext : DbContext
     modelBuilder.Entity<Document>(entity =>
     {
       entity.ToTable("Documents");
+      entity.Property(d => d.Folder).HasMaxLength(50).HasDefaultValue("general");
       entity.Property(d => d.ContentJson).HasColumnType("nvarchar(max)");
       entity.HasOne(d => d.OwnerUser)
         .WithMany(u => u.Documents)

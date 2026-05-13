@@ -19,7 +19,16 @@ public class DocumentsController : ControllerBase
   {
     _db = db;
   }
+  private static string NormalizeFolder(string? folder)
+  {
+    var normalized = (folder ?? "general").Trim();
 
+    return normalized switch
+    {
+      "general" or "organ" or "guitar" or "violin" or "drums" => normalized,
+      _ => "general",
+    };
+  }
   [HttpGet]
   public async Task<ActionResult<IEnumerable<DocumentListItemDto>>> GetMine()
   {
@@ -30,13 +39,14 @@ public class DocumentsController : ControllerBase
     var items = await _db.Documents
       .Where(d => d.OwnerUserId == userId.Value)
       .OrderByDescending(d => d.UpdatedAt)
-      .Select(d => new DocumentListItemDto
-      {
-        Id = d.Id,
-        Title = d.Title,
-        CreatedAt = d.CreatedAt,
-        UpdatedAt = d.UpdatedAt,
-      })
+    .Select(d => new DocumentListItemDto
+{
+  Id = d.Id,
+  Title = d.Title,
+  Folder = d.Folder,
+  CreatedAt = d.CreatedAt,
+  UpdatedAt = d.UpdatedAt,
+})
       .ToListAsync();
 
     return Ok(items);
@@ -58,6 +68,7 @@ public class DocumentsController : ControllerBase
         ContentJson = d.ContentJson,
         CreatedAt = d.CreatedAt,
         UpdatedAt = d.UpdatedAt,
+        Folder = d.Folder,
       })
       .FirstOrDefaultAsync();
 
@@ -83,6 +94,7 @@ public class DocumentsController : ControllerBase
       CreatedAt = now,
       UpdatedAt = now,
       IsDeleted = false,
+      Folder = NormalizeFolder(request.Folder),
     };
 
     _db.Documents.Add(entity);
@@ -95,6 +107,7 @@ public class DocumentsController : ControllerBase
       ContentJson = entity.ContentJson,
       CreatedAt = entity.CreatedAt,
       UpdatedAt = entity.UpdatedAt,
+      Folder = entity.Folder,
     };
 
     return CreatedAtAction(nameof(GetById), new { id = entity.Id }, dto);
@@ -115,6 +128,7 @@ public class DocumentsController : ControllerBase
 
     entity.Title = request.Title.Trim();
     entity.ContentJson = request.ContentJson;
+    entity.Folder = NormalizeFolder(request.Folder);
     entity.UpdatedAt = DateTime.UtcNow;
 
     await _db.SaveChangesAsync();
@@ -126,6 +140,7 @@ public class DocumentsController : ControllerBase
       ContentJson = entity.ContentJson,
       CreatedAt = entity.CreatedAt,
       UpdatedAt = entity.UpdatedAt,
+      Folder = entity.Folder,
     });
   }
 

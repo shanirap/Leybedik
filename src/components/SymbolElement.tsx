@@ -3,9 +3,13 @@ import type {
   SymbolElement as SymbolElementType,
 } from "../types/editorDocument";
 import {
-  getElementFrameStyle,
+   getElementFrameStyle,
+  startElementDrag,
+  startElementResize,
   stopEditorEvent,
 } from "./elementViewUtils";
+const MIN_WIDTH = 20;
+const MIN_HEIGHT = 20;
 
 interface SymbolElementProps {
   page: PageJson;
@@ -22,9 +26,12 @@ interface SymbolElementProps {
 
 
 export function SymbolElement({
+  page,
   element,
   isSelected,
   onSelect,
+  onMove,
+  onResize,
   onDelete,
   onDuplicate,
 }: SymbolElementProps) {
@@ -34,9 +41,31 @@ export function SymbolElement({
         isSelected ? "editor-element-selected" : ""
       }`}
       style={getElementFrameStyle(element)}
- onMouseDown={(event) => {
+onMouseDown={(event) => {
   event.stopPropagation();
   onSelect();
+
+  if (event.target instanceof HTMLElement) {
+    if (
+      event.target.closest("input") ||
+      event.target.closest("textarea") ||
+      event.target.closest("button")
+    ) {
+      return;
+    }
+  }
+
+  startElementDrag(event, {
+    page,
+    elementId: element.id,
+    startX: event.clientX,
+    startY: event.clientY,
+    elementX: element.x,
+    elementY: element.y,
+    elementWidth: element.width,
+    elementHeight: element.height,
+    onMove,
+  });
 }}
     >
       <div className="symbol-content">{renderSymbol(element)}</div>
@@ -62,7 +91,27 @@ export function SymbolElement({
           </button>
         </div>
       ) : null}
-
+{isSelected ? (
+  <button
+    type="button"
+    className="element-resize-handle"
+    aria-label="שינוי גודל"
+    onMouseDown={(event) => {
+      startElementResize(event, {
+        page,
+        startX: event.clientX,
+        startY: event.clientY,
+        startWidth: element.width,
+        startHeight: element.height,
+        elementX: element.x,
+        elementY: element.y,
+        minWidth: MIN_WIDTH,
+        minHeight: MIN_HEIGHT,
+        onResize,
+      });
+    }}
+  />
+) : null}
     </div>
   );
 }

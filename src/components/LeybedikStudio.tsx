@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { SavedDocument } from "../types/savedDocument";
+import type { DocumentFolder, SavedDocument } from "../types/savedDocument";
+import { DOCUMENT_FOLDER_LABELS, DOCUMENT_FOLDERS } from "../types/savedDocument";
 import type {
   EditorDocumentContent,
   EditorElement,
@@ -216,7 +217,19 @@ function createId(prefix: string): string {
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
+function shouldIgnoreKeyboardMove(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
 
+  return Boolean(
+    target.closest("input") ||
+      target.closest("textarea") ||
+      target.closest("select") ||
+      target.closest("button") ||
+      target.closest("[contenteditable='true']")
+  );
+}
 function getFirstPage(document: EditorDocumentContent): PageJson {
   return (
     document.pages[0] ?? {
@@ -247,7 +260,7 @@ function findElement(
   if (!elementId) return null;
 
   for (const page of document.pages) {
-    const element = page.elements.find((item) => item.id === elementId);
+      const element = page.elements.find((item) => item.id === elementId);
     if (element) {
       return { pageId: page.id, element };
     }
@@ -269,16 +282,17 @@ export function LeybedikStudio(props: LeybedikStudioProps) {
 
   const onBackToDocuments = props.onBackToDocuments ?? props.onBackToHome;
   const [title, setTitle] = useState(currentDocument.title);
+  const [documentFolder, setDocumentFolder] = useState<DocumentFolder>(currentDocument.folder ?? "general");
   const [editorState, setEditorState] = useState<EditorDocumentContent>(() =>
     normalizeEditorDocumentContent(currentDocument.contentJson)
   );
   const [activePageId, setActivePageId] = useState(DEFAULT_PAGE_ID);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<
-    "saved" | "dirty" | "saving" | "error"
-  >("saved");
+  const [saveStatus, setSaveStatus] = useState<"saved" | "dirty" | "saving" | "error">("saved");
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
-const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
+
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const editorStateRef = useRef(editorState);
   const titleRef = useRef(title);
   const saveTimerRef = useRef<number | null>(null);
@@ -336,6 +350,7 @@ const imageInputRef = useRef<HTMLInputElement | null>(null);
     const normalized = normalizeEditorDocumentContent(currentDocument.contentJson);
     setEditorState(normalized);
     setTitle(currentDocument.title);
+    setDocumentFolder(currentDocument.folder ?? "general");
     setActivePageId(normalized.pages[0]?.id ?? DEFAULT_PAGE_ID);
     setSelectedElementId(null);
     setSaveStatus("saved");
@@ -373,6 +388,7 @@ async function handleSave(isAutosave = false) {
       contentJson,
       createdAt: documentToSave.createdAt ?? now,
       updatedAt: now,
+      folder: documentFolder,
     };
 
     await saveDocument(nextDocument, { isAutosave });
@@ -427,6 +443,114 @@ function getSongLineBundle(page: PageJson, songLineId: string): EditorElement[] 
     },
     [markDirty]
   );
+const moveSelectedSongLineStackByKeyboard = useCallback(
+  (deltaY: number) => {
+    if (!selectedElementId) {
+      return;
+    }
+
+    updateDocumentState((current) => ({
+      ...current,
+      pages: current.pages.map((page) => {
+        const selectedElement = page.elements.find(
+          (element) => element.id === selectedElementId
+        );
+
+        if (!selectedElement || selectedElement.type !== "songLine") {
+          return page;
+        }
+
+        const selectedY = selectedElement.y;
+
+        const templateElements = page.elements.filter(isTemplateElement);
+
+        const movingElements = templateElements.filter(
+          (element) => element.y >= selectedY
+        );
+
+        if (movingElements.length === 0) {
+          return page;
+        }
+
+        const previousBottom = templateElements
+          .filter((element) => element.y < selectedY)
+          .reduce(
+            (maxBottom, element) =>
+              Math.max(
+                maxBottom,
+                element.y + getTemplateElementHeight(element)
+              ),
+            0
+          );
+
+        const minDelta =
+          previousBottom > 0
+            ? previousBottom + TEMPLATE_GAP - selectedY
+            : -selectedY;
+
+        const movingBottom = Math.max(
+          ...movingElements.map(
+            (element) => element.y + getTemplateElementHeight(element)
+          )
+        );
+
+        const maxDelta = page.height - movingBottom;
+
+        const safeDeltaY = clamp(deltaY, minDelta, maxDelta);
+
+        if (safeDeltaY === 0) {
+          return page;
+        }
+
+        return {
+          ...page,
+          elements: page.elements.map((element) => {
+            if (!isTemplateElement(element)) {
+              return element;
+            }
+
+            if (element.y < selectedY) {
+              return element;
+            }
+
+            return {
+              ...element,
+              y: element.y + safeDeltaY,
+            };
+          }),
+        };
+      }),
+    }));
+  },
+  [selectedElementId, updateDocumentState]
+);
+
+useEffect(() => {
+  function handleKeyDown(event: KeyboardEvent) {
+    if (shouldIgnoreKeyboardMove(event.target)) {
+      return;
+    }
+
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      return;
+    }
+
+    event.preventDefault();
+
+    const step = event.shiftKey ? 10 : 1;
+
+    moveSelectedSongLineStackByKeyboard(
+      event.key === "ArrowUp" ? -step : step
+    );
+  }
+
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+}, [moveSelectedSongLineStackByKeyboard]);
+
 
   const updateElement = useCallback(
     (pageId: string, elementId: string, patch: Partial<EditorElement>) => {
@@ -820,6 +944,7 @@ const addGuitarSongLine = useCallback(() => {
 
   setSelectedElementId(element.id);
 }, [activePageId, updateDocumentState]);
+
 const addSongLine = useCallback(() => {
   const state = editorStateRef.current;
   const activePage =
@@ -960,6 +1085,7 @@ const addTabBlock = useCallback(() => {
       tabNumber: "",
       instrument: "guitar",
       repeatMarks: [],
+      showMeasureLines: false,
     },
   };
 
@@ -1005,6 +1131,7 @@ const addViolinTabBlock = useCallback(() => {
       lines: ["", "", "", ""],
       tabNumber: "",
       repeatMarks: [],
+      showMeasureLines: false,
     },
   };
 
@@ -1386,25 +1513,7 @@ const addVoltaSymbol = useCallback(() => {
 
   addElement(element);
 }, [addElement]);
-  
-  // const deleteElement = useCallback(
-  //   (pageId: string, elementId: string) => {
-  //     updateDocumentState((current) => ({
-  //       ...current,
-  //       pages: current.pages.map((page) =>
-  //         page.id === pageId
-  //           ? {
-  //               ...page,
-  //               elements: page.elements.filter((element) => element.id !== elementId),
-  //             }
-  //           : page
-  //       ),
-  //     }));
 
-  //     setSelectedElementId((current) => (current === elementId ? null : current));
-  //   },
-  //   [updateDocumentState]
-  // );
 const deleteElement = useCallback(
   (pageId: string, elementId: string) => {
     updateDocumentState((current) => ({
@@ -1643,6 +1752,22 @@ const addImage = useCallback(() => {
     window.print();
   }, 80);
 }, []);
+function handleBackToDocuments() {
+  const isTempDocument = String(currentDocument.id).startsWith("temp-");
+
+  if (isTempDocument || saveStatus === "dirty" || saveStatus === "saving" || saveStatus === "error") {
+    alert("יש שינויים שלא נשמרו. קודם צריך לשמור את המסמך.");
+    return;
+  }
+
+  onBackToDocuments?.();
+}
+
+
+
+
+
+
 
   return (
     <div className="leybedik-studio">
@@ -1665,7 +1790,7 @@ const addImage = useCallback(() => {
       <header className="studio-topbar">
         <div className="studio-topbar-actions">
           {onBackToDocuments ? (
-            <button className="studio-secondary-button" onClick={onBackToDocuments}>
+            <button className="studio-secondary-button" onClick={handleBackToDocuments}>
               חזרה למסמכים
             </button>
           ) : null}
@@ -1686,14 +1811,35 @@ const addImage = useCallback(() => {
           {saveStatus === "saved" ? "נשמר" : null}
           {saveStatus === "dirty" ? "יש שינויים שלא נשמרו" : null}
           {saveStatus === "error" ? saveErrorMessage ?? "שגיאה בשמירה" : null}
-
+<label className="studio-folder-select">
+  <span>תיקייה</span>
+  <select
+    value={documentFolder}
+    onChange={(event) => {
+      setDocumentFolder(event.target.value as DocumentFolder);
+      markDirty();
+    }}
+  >
+    {DOCUMENT_FOLDERS.map((folder) => (
+      <option key={folder} value={folder}>
+        {DOCUMENT_FOLDER_LABELS[folder]}
+      </option>
+    ))}
+  </select>
+</label>
           <button className="studio-primary-button" onClick={() => void handleSave(false)}>
             שמירה
           </button>
         </div>
       </header>
 
-      <div className="studio-layout">
+      <div
+  className={`studio-layout ${
+    isPropertiesPanelOpen
+      ? "studio-layout-properties-open"
+      : "studio-layout-properties-closed"
+  }`}
+>
         <EditorToolbar
           onAddTitle={() => addTextBox("title")}
           onAddTextBox={() => addTextBox("text")}
@@ -1734,7 +1880,25 @@ const addImage = useCallback(() => {
           />
         </main>
 
-        <PropertiesPanel
+<aside
+  className={`properties-panel-shell ${
+    isPropertiesPanelOpen
+      ? "properties-panel-shell-open"
+      : "properties-panel-shell-closed"
+  }`}
+>
+  <button
+    type="button"
+    className="properties-panel-toggle"
+    onClick={() => setIsPropertiesPanelOpen((current) => !current)}
+    aria-label={isPropertiesPanelOpen ? "סגירת מאפיינים" : "פתיחת מאפיינים"}
+    title={isPropertiesPanelOpen ? "סגירת מאפיינים" : "פתיחת מאפיינים"}
+  >
+    {isPropertiesPanelOpen ? "‹" : "›"}
+  </button>
+
+  <div className="properties-panel-shell-content">
+    <PropertiesPanel
           selectedElement={selectedElement}
           onUpdateElement={updateSelectedElement}
           onUpdateElementData={updateSelectedElementData}
@@ -1750,6 +1914,8 @@ const addImage = useCallback(() => {
           }}
           onBringToFront={bringSelectedToFront}
         />
+  </div>
+</aside>
       </div>
     </div>
   );

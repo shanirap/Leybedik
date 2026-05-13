@@ -6,6 +6,17 @@ import type {
   TextBoxElement,
 } from "../types/editorDocument";
 
+const FONT_OPTIONS = [
+  { label: "Arial", value: "Arial, sans-serif" },
+  { label: "David", value: "David, serif" },
+  { label: "Times New Roman", value: '"Times New Roman", serif' },
+  { label: "Noto Sans Hebrew", value: '"Noto Sans Hebrew", Arial, sans-serif' },
+  { label: "Rubik", value: "Rubik, Arial, sans-serif" },
+  { label: "Heebo", value: "Heebo, Arial, sans-serif" },
+  { label: "Frank Ruhl Libre", value: '"Frank Ruhl Libre", serif' },
+  { label: "Courier New", value: '"Courier New", monospace' },
+];
+
 interface PropertiesPanelProps {
   selectedElement: EditorElement | null;
   onUpdateElement: (patch: Partial<EditorElement>) => void;
@@ -160,7 +171,20 @@ function TextBoxProperties({
           }))
         }
       />
-
+      <SelectField
+        label="פונט"
+        value={data.fontFamily}
+        options={FONT_OPTIONS}
+        onChange={(value) =>
+          onUpdateElementData<TextBoxElement>((current) => ({
+            ...current,
+            data: {
+              ...current.data,
+              fontFamily: value,
+            },
+          }))
+        }
+      />
       <TextField
         label="צבע"
         value={data.color}
@@ -270,7 +294,20 @@ function SongLineProperties({
           }))
         }
       />
-
+<SelectField
+  label="פונט מילים"
+  value={data.lyricsFontFamily}
+  options={FONT_OPTIONS}
+  onChange={(value) =>
+    onUpdateElementData<SongLineElement>((current) => ({
+      ...current,
+      data: {
+        ...current.data,
+        lyricsFontFamily: value,
+      },
+    }))
+  }
+/>
       <NumberField
         label="גודל אקורדים"
         value={data.chordFontSize}
@@ -281,7 +318,20 @@ function SongLineProperties({
           }))
         }
       />
-
+<SelectField
+  label="פונט אקורדים"
+  value={data.chordFontFamily ?? data.lyricsFontFamily}
+  options={FONT_OPTIONS}
+  onChange={(value) =>
+    onUpdateElementData<SongLineElement>((current) => ({
+      ...current,
+      data: {
+        ...current.data,
+        chordFontFamily: value,
+      },
+    }))
+  }
+/>
       <TextField
         label="צבע מילים"
         value={data.lyricsColor}

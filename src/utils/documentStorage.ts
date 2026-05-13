@@ -1,4 +1,5 @@
 import type { SavedDocument } from "../types/savedDocument";
+import { normalizeDocumentFolder } from "../types/savedDocument";
 import {
   createEmptyEditorContent,
   isEditorDocumentContent,
@@ -15,7 +16,7 @@ function normalizeSavedDocument(raw: Record<string, unknown>): SavedDocument {
   const title = String(raw.title ?? "");
   const createdAt = String(raw.createdAt ?? new Date().toISOString());
   const updatedAt = String(raw.updatedAt ?? createdAt);
-
+  const folder = normalizeDocumentFolder(raw.folder);
   let contentJson = createEmptyEditorContent();
   if (isEditorDocumentContent(raw.contentJson)) {
     contentJson = {
@@ -35,6 +36,7 @@ function normalizeSavedDocument(raw: Record<string, unknown>): SavedDocument {
     contentJson,
     createdAt,
     updatedAt,
+    folder,
   };
 
   if (legacyHtml !== undefined) {
@@ -108,6 +110,7 @@ export function duplicateDocument(id: string): SavedDocument | null {
     contentJson: structuredClone(original.contentJson),
     createdAt: now,
     updatedAt: now,
+    folder: original.folder,
   };
 
   if (original.contentHtml !== undefined) {

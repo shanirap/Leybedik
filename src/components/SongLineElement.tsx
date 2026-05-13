@@ -432,6 +432,7 @@ startElementDrag(event, {
           dir={chordDirection}
           style={{
             fontSize: data.chordFontSize,
+            fontFamily: data.chordFontFamily ?? data.lyricsFontFamily,
             color: data.chordColor,
             textAlign: chordTextAlign,
     direction: chordDirection,
@@ -448,6 +449,7 @@ startElementDrag(event, {
           dir="ltr"
           style={{
             fontSize: data.chordFontSize,
+            fontFamily: data.chordFontFamily ?? data.lyricsFontFamily,
             color: data.chordColor,
           }}
           onMouseDown={(event) => placeCaretInChordLine(event, "aboveBottom")}
@@ -489,6 +491,7 @@ startElementDrag(event, {
           dir="ltr"
           style={{
             fontSize: data.chordFontSize,
+            fontFamily: data.chordFontFamily ?? data.lyricsFontFamily,
             color: data.chordColor,
           }}
           onMouseDown={(event) => placeCaretInChordLine(event, "below")}

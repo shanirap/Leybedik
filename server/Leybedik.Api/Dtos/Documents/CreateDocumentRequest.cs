@@ -8,6 +8,9 @@ public class CreateDocumentRequest
   [MaxLength(255)]
   public string Title { get; set; } = string.Empty;
 
+  [MaxLength(50)]
+  public string Folder { get; set; } = "general";
+  
   [Required]
   public string ContentJson { get; set; } = "{}";
 }

@@ -113,6 +113,7 @@ const defaultLines = isViolin ? ["", "", "", ""] : DEFAULT_LINES;
 const lines = data.lines?.length === lineCount ? data.lines : defaultLines;
 const tabNumber = data.tabNumber ?? "";
 const repeatMarks = data.repeatMarks ?? [];
+const showMeasureLines = data.showMeasureLines ?? false;
 
 const [selectedRepeatMarkId, setSelectedRepeatMarkId] = useState<string | null>(
   null
@@ -149,6 +150,17 @@ const currentLines =
       },
     }));
   }
+
+  function toggleMeasureLines() {
+  onUpdateData((current) => ({
+    ...current,
+    data: {
+      ...current.data,
+      showMeasureLines: !(current.data.showMeasureLines ?? false),
+    },
+  }));
+}
+
   function addRepeatMark(type: TabRepeatMark["type"]) {
   const mark: TabRepeatMark = {
     id: createId("tab-repeat"),
@@ -409,6 +421,13 @@ onMouseDown={(event) => {
     >
       + סגירה
     </button>
+    <button
+  type="button"
+  onMouseDown={stopEditorEvent}
+  onClick={toggleMeasureLines}
+>
+  {showMeasureLines ? "- תיבות" : "+ תיבות"}
+</button>
   </div>
 ) : null}
 
@@ -683,7 +702,7 @@ onMouseDown={(event) => {
     </div>
   );
 })}
-{isViolin ? (
+{/* {isViolin ? (
   <>
     <span
       aria-hidden="true"
@@ -711,6 +730,27 @@ onMouseDown={(event) => {
         pointerEvents: "none",
       }}
     />
+  </>
+) : null} */}
+{showMeasureLines ? (
+  <>
+    {[25, 50, 75].map((position) => (
+      <span
+        key={position}
+        aria-hidden="true"
+        className="tab-measure-fixed-line"
+        style={{
+          position: "absolute",
+          left: `${position}%`,
+          top: 0,
+          width: 2,
+          height: "100%",
+          background: "#111827",
+          zIndex: 3,
+          pointerEvents: "none",
+        }}
+      />
+    ))}
   </>
 ) : null}
 
