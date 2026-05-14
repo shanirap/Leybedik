@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Leybedik.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+43b689171e38d6691d12397ba48c9fb900295820")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+21d095daf0080ba70f11d5ece4563fad134baec5")]
 [assembly: System.Reflection.AssemblyProductAttribute("Leybedik.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Leybedik.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

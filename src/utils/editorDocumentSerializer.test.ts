@@ -54,8 +54,7 @@ it("renderDocumentFromJson ואז extractDocumentJson לא שוברים ומחז
     ],
   };
 
-  renderDocumentFromJson(container, content);
-
+renderDocumentFromJson(content, container);
   const roundTrip = extractDocumentJson(container);
 
   expect(roundTrip.version).toBe(2);
