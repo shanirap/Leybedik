@@ -12,6 +12,7 @@ public class LeybedikDbContext : DbContext
 
   public DbSet<AppUser> Users => Set<AppUser>();
   public DbSet<Document> Documents => Set<Document>();
+  public DbSet<DocumentFolder> DocumentFolders => Set<DocumentFolder>();
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
@@ -21,15 +22,42 @@ public class LeybedikDbContext : DbContext
       entity.HasIndex(u => u.Email).IsUnique();
     });
 
+    modelBuilder.Entity<DocumentFolder>(entity =>
+    {
+      entity.ToTable("DocumentFolders");
+
+      entity.Property(f => f.Name)
+        .HasMaxLength(100)
+        .IsRequired();
+
+      entity.HasOne(f => f.OwnerUser)
+        .WithMany()
+        .HasForeignKey(f => f.OwnerUserId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasIndex(f => new { f.OwnerUserId, f.Name })
+        .IsUnique();
+
+      entity.HasQueryFilter(f => !f.IsDeleted);
+    });
+
     modelBuilder.Entity<Document>(entity =>
     {
       entity.ToTable("Documents");
-      entity.Property(d => d.Folder).HasMaxLength(50).HasDefaultValue("general");
-      entity.Property(d => d.ContentJson).HasColumnType("nvarchar(max)");
+
+      entity.Property(d => d.ContentJson)
+        .HasColumnType("nvarchar(max)");
+
       entity.HasOne(d => d.OwnerUser)
         .WithMany(u => u.Documents)
         .HasForeignKey(d => d.OwnerUserId)
         .OnDelete(DeleteBehavior.Cascade);
+
+      entity.HasOne(d => d.Folder)
+      .WithMany()
+      .HasForeignKey(d => d.FolderId)
+      .OnDelete(DeleteBehavior.NoAction);
+
       entity.HasQueryFilter(d => !d.IsDeleted);
     });
   }

@@ -23,7 +23,8 @@ function createEmptyDocument(): SavedDocument {
   return {
   id: `temp-${crypto.randomUUID()}`,
   title: "",
-  folder: "general",
+  folderId: null,
+  folderName: null,
   contentJson: createEmptyEditorContent(),
   createdAt: now,
   updatedAt: now,
@@ -99,8 +100,8 @@ function App() {
         id: `temp-${crypto.randomUUID()}`,
         createdAt: now,
         updatedAt: now,
-        folder: document.folder ?? "general",
-      };
+        folderId: document.folderId ?? null,
+        folderName: document.folderName ?? null,      };
       const saved = await createDocument(toCreate);
       setScreen({ name: "editor", document: saved });
     } catch (e) {
@@ -157,7 +158,8 @@ function App() {
                   contentJson: result.contentJson,
                   createdAt: now,
                   updatedAt: now,
-                  folder: "general",
+                  folderId: null,
+                  folderName: null,
                 },
               });
             }}

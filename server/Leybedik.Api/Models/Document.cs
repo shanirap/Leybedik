@@ -15,9 +15,9 @@ public class Document
   [MaxLength(255)]
   public string Title { get; set; } = string.Empty;
 
-  [Required]
-  [MaxLength(50)]
-  public string Folder { get; set; } = "general";
+  public int? FolderId { get; set; }
+
+  public DocumentFolder? Folder { get; set; }
   
   [Required]
   [Column(TypeName = "nvarchar(max)")]

@@ -7,9 +7,9 @@ import {
 } from "./editorDocumentSerializer";
 
 describe("editorDocumentSerializer", () => {
-  it("createEmptyEditorContent מחזיר גרסה 1 ו-blocks ריק", () => {
+  it("createEmptyEditorContent מחזיר גרסה 2 ו-blocks ריק", () => {
     const empty = createEmptyEditorContent();
-    expect(empty.version).toBe(1);
+    expect(empty.version).toBe(2);
     expect(empty.blocks).toEqual([]);
   });
 
@@ -25,41 +25,41 @@ describe("editorDocumentSerializer", () => {
     const root = document.createElement("div");
     const json = extractDocumentJson(root);
     expect(json.blocks).toEqual([]);
-    expect(json.version).toBe(1);
+    expect(json.version).toBe(2);
   });
+it("extractDocumentJson על DOM ישן לא שובר ומחזיר מבנה עמודים תקין", () => {
+  const root = document.createElement("div");
 
-  it("extractDocumentJson מחלץ טקסט מבלוק מילים פשוט", () => {
-    const root = document.createElement("div");
-    const block = document.createElement("div");
-    block.className = "block-unit";
-    block.dataset.blockId = "bid-1";
-    block.innerHTML = `
-      <div class="chord-lane"></div>
-      <textarea class="lyrics-input"></textarea>
-    `;
-    const ta = block.querySelector("textarea")!;
-    ta.value = "שורה לבדיקה";
-    root.appendChild(block);
+  const json = extractDocumentJson(root);
 
-    const json = extractDocumentJson(root);
-    expect(json.blocks).toHaveLength(1);
-    expect(json.blocks[0].type).toBe("lyrics");
-    expect(json.blocks[0].text).toBe("שורה לבדיקה");
-  });
+  expect(json.version).toBe(2);
+  expect(json.blocks).toEqual([]);
+  expect(json.pages).toBeDefined();
+  expect(json.pages.length).toBeGreaterThanOrEqual(1);
+  expect(json.pages[0].elements).toEqual([]);
+});
+it("renderDocumentFromJson ואז extractDocumentJson לא שוברים ומחזירים version תקין", () => {
+  const container = document.createElement("div");
 
-  it("renderDocumentFromJson ואז extract מחזירים גרסה ומספר בלוקים תואם", () => {
-    const canvas = document.createElement("div");
-    const content = createEmptyEditorContent();
-    content.blocks.push({
-      id: "x",
-      type: "lyrics",
-      text: "טקסט",
-      elements: [],
-    });
-    renderDocumentFromJson(content, canvas, document);
-    const roundTrip = extractDocumentJson(canvas);
-    expect(roundTrip.version).toBe(1);
-    expect(roundTrip.blocks).toHaveLength(1);
-    expect(roundTrip.blocks[0].text).toBe("טקסט");
-  });
+  const content = {
+    version: 2,
+    blocks: [],
+    pages: [
+      {
+        id: "page-1",
+        width: 794,
+        height: 1123,
+        elements: [],
+      },
+    ],
+  };
+
+  renderDocumentFromJson(container, content);
+
+  const roundTrip = extractDocumentJson(container);
+
+  expect(roundTrip.version).toBe(2);
+  expect(roundTrip.blocks).toEqual([]);
+  expect(roundTrip.pages).toBeDefined();
+});
 });

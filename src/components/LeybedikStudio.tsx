@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentFolder, SavedDocument } from "../types/savedDocument";
-import { DOCUMENT_FOLDER_LABELS, DOCUMENT_FOLDERS } from "../types/savedDocument";
+import { createFolder, getFolders } from "../api/foldersApi";
 import type {
   EditorDocumentContent,
   EditorElement,
@@ -282,8 +282,10 @@ export function LeybedikStudio(props: LeybedikStudioProps) {
 
   const onBackToDocuments = props.onBackToDocuments ?? props.onBackToHome;
   const [title, setTitle] = useState(currentDocument.title);
-  const [documentFolder, setDocumentFolder] = useState<DocumentFolder>(currentDocument.folder ?? "general");
-  const [editorState, setEditorState] = useState<EditorDocumentContent>(() =>
+  const [folders, setFolders] = useState<DocumentFolder[]>([]);
+ const [documentFolderId, setDocumentFolderId] = useState<number | null>(
+  currentDocument.folderId ?? null
+);  const [editorState, setEditorState] = useState<EditorDocumentContent>(() =>
     normalizeEditorDocumentContent(currentDocument.contentJson)
   );
   const [activePageId, setActivePageId] = useState(DEFAULT_PAGE_ID);
@@ -299,7 +301,13 @@ export function LeybedikStudio(props: LeybedikStudioProps) {
   const handleSaveRef = useRef<(isAutosave?: boolean) => Promise<void>>(
     async () => {}
   );
-
+useEffect(() => {
+  void getFolders()
+    .then(setFolders)
+    .catch(() => {
+      setFolders([]);
+    });
+}, []);
   useEffect(() => {
     editorStateRef.current = editorState;
   }, [editorState]);
@@ -350,8 +358,7 @@ export function LeybedikStudio(props: LeybedikStudioProps) {
     const normalized = normalizeEditorDocumentContent(currentDocument.contentJson);
     setEditorState(normalized);
     setTitle(currentDocument.title);
-    setDocumentFolder(currentDocument.folder ?? "general");
-    setActivePageId(normalized.pages[0]?.id ?? DEFAULT_PAGE_ID);
+setDocumentFolderId(currentDocument.folderId ?? null);    setActivePageId(normalized.pages[0]?.id ?? DEFAULT_PAGE_ID);
     setSelectedElementId(null);
     setSaveStatus("saved");
     setSaveErrorMessage(null);
@@ -388,7 +395,9 @@ async function handleSave(isAutosave = false) {
       contentJson,
       createdAt: documentToSave.createdAt ?? now,
       updatedAt: now,
-      folder: documentFolder,
+      folderId: documentFolderId,
+      folderName:
+  folders.find((folder) => folder.id === documentFolderId)?.name ?? null,
     };
 
     await saveDocument(nextDocument, { isAutosave });
@@ -1753,8 +1762,9 @@ const addImage = useCallback(() => {
   }, 80);
 }, []);
 function handleBackToDocuments() {
-  const isTempDocument = String(currentDocument.id).startsWith("temp-");
-
+const isTempDocument = currentDocument
+  ? String(currentDocument.id).startsWith("temp-")
+  : false;
   if (isTempDocument || saveStatus === "dirty" || saveStatus === "saving" || saveStatus === "error") {
     alert("יש שינויים שלא נשמרו. קודם צריך לשמור את המסמך.");
     return;
@@ -1814,18 +1824,40 @@ function handleBackToDocuments() {
 <label className="studio-folder-select">
   <span>תיקייה</span>
   <select
-    value={documentFolder}
-    onChange={(event) => {
-      setDocumentFolder(event.target.value as DocumentFolder);
-      markDirty();
-    }}
-  >
-    {DOCUMENT_FOLDERS.map((folder) => (
-      <option key={folder} value={folder}>
-        {DOCUMENT_FOLDER_LABELS[folder]}
-      </option>
-    ))}
-  </select>
+  value={documentFolderId ?? ""}
+  onChange={(event) => {
+    const value = event.target.value;
+
+    if (value === "__new__") {
+      const name = window.prompt("שם תיקייה חדשה");
+
+      if (!name?.trim()) {
+        return;
+      }
+
+      void createFolder(name.trim()).then((folder) => {
+        setFolders((current) => [...current, folder]);
+        setDocumentFolderId(folder.id);
+        setSaveStatus("dirty");
+      });
+
+      return;
+    }
+
+    setDocumentFolderId(value ? Number(value) : null);
+    setSaveStatus("dirty");
+  }}
+>
+  <option value="">ללא תיקייה</option>
+
+  {folders.map((folder) => (
+    <option key={folder.id} value={folder.id}>
+      {folder.name}
+    </option>
+  ))}
+
+  <option value="__new__">+ תיקייה חדשה</option>
+</select>
 </label>
           <button className="studio-primary-button" onClick={() => void handleSave(false)}>
             שמירה

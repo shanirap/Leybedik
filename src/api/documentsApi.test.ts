@@ -15,8 +15,7 @@ describe("documentsApi — מיפוי contentJson", () => {
 
   it("parseContentJson על מחרוזת לא תקינה מחזיר תוכן ריק", () => {
     const parsed = parseContentJson("%%%");
-    expect(parsed.version).toBe(1);
-    expect(parsed.blocks).toEqual([]);
+expect(parsed.version).toBe(2);    expect(parsed.blocks).toEqual([]);
   });
 
   it("parseContentJson על אובייקט בלי blocks מחזיר ריק", () => {

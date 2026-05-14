@@ -8,8 +8,7 @@ public class UpdateDocumentRequest
   [MaxLength(255)]
   public string Title { get; set; } = string.Empty;
 
-  [MaxLength(50)]
-  public string Folder { get; set; } = "general";
+  public int? FolderId { get; set; }
 
   [Required]
   public string ContentJson { get; set; } = "{}";
