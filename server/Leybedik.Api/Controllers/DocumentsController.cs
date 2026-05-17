@@ -12,12 +12,19 @@ namespace Leybedik.Api.Controllers;
 [Route("api/documents")]
 public class DocumentsController : ControllerBase
 {
+  private const int MaxContentJsonLength = 5 * 1024 * 1024; // 5 MB
   private readonly LeybedikDbContext _db;
 
   public DocumentsController(LeybedikDbContext db)
   {
     _db = db;
   }
+
+private static bool IsContentJsonTooLarge(string? contentJson)
+{
+    return !string.IsNullOrEmpty(contentJson)
+        && System.Text.Encoding.UTF8.GetByteCount(contentJson) > MaxContentJsonLength;
+}
 
   private int? GetUserId()
   {
@@ -107,7 +114,10 @@ public class DocumentsController : ControllerBase
     {
       return Unauthorized();
     }
-
+if (IsContentJsonTooLarge(request.ContentJson))
+{
+    return BadRequest(new { message = "המסמך גדול מדי לשמירה." });
+}
     if (request.FolderId is not null)
     {
       var folderExists = await FolderBelongsToUserAsync(
@@ -177,7 +187,11 @@ public class DocumentsController : ControllerBase
     {
       return NotFound();
     }
-
+    if (IsContentJsonTooLarge(request.ContentJson))
+    {
+        return BadRequest(new { message = "המסמך גדול מדי לשמירה." });
+    }
+    
     if (request.FolderId is not null)
     {
       var folderExists = await FolderBelongsToUserAsync(
@@ -241,4 +255,5 @@ public class DocumentsController : ControllerBase
 
     return NoContent();
   }
+  
 }

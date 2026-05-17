@@ -120,14 +120,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+var allowedOrigins = builder.Configuration
+  .GetSection("AllowedOrigins")
+  .Get<string[]>() ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
-  options.AddPolicy("ReactDev", policy =>
-    policy.WithOrigins("http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175")
+  options.AddPolicy("ConfiguredOrigins", policy =>
+  {
+    policy
+      .WithOrigins(allowedOrigins)
       .AllowAnyHeader()
-      .AllowAnyMethod());
+      .AllowAnyMethod();
+  });
 });
 
 var app = builder.Build();
@@ -139,10 +144,20 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("ReactDev");
+
+if (allowedOrigins.Length > 0)
+{
+  app.UseCors("ConfiguredOrigins");
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 app.Run();
 

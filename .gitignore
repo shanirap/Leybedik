@@ -1,5 +1,7 @@
+# --------------------
 # Logs
-logs
+# --------------------
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,18 +9,63 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# --------------------
+# Client / React / Vite
+# --------------------
+node_modules/
+dist/
+dist-ssr/
+.vite/
 
+client/node_modules/
+client/dist/
+client/dist-ssr/
+client/.vite/
+
+# Local env files
+*.local
+.env.local
+.env.*.local
+client/.env.local
+client/.env.*.local
+
+# --------------------
+# Server / .NET
+# --------------------
+bin/
+obj/
+server/**/bin/
+server/**/obj/
+server/**/TestResults/
+
+# Publish output
+publish/
+out/
+
+# --------------------
 # Editor directories and files
+# --------------------
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
+.vs/
 .DS_Store
+Thumbs.db
+
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 *.sw?
+*.user
+*.rsuser
+
+# Generated production/package outputs
+production-package/
+publish/
+out/
+
+# Generated SPA files copied from client/dist
+server/Leybedik.Api/wwwroot/
+
+# Production secrets / local production config
+server/Leybedik.Api/appsettings.Production.json

@@ -11,19 +11,33 @@ namespace Leybedik.Api.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-  private readonly LeybedikDbContext _db;
-  private readonly JwtService _jwt;
+private readonly LeybedikDbContext _db;
+private readonly JwtService _jwt;
+private readonly IConfiguration _configuration;
 
-  public AuthController(LeybedikDbContext db, JwtService jwt)
-  {
-    _db = db;
-    _jwt = jwt;
-  }
+public AuthController(
+  LeybedikDbContext db,
+  JwtService jwt,
+  IConfiguration configuration)
+{
+  _db = db;
+  _jwt = jwt;
+  _configuration = configuration;
+}
 
-  [HttpPost("register")]
-  public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
-  {
-    var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+[HttpPost("register")]
+public async Task<ActionResult<AuthResponse>> Register([FromBody] RegisterRequest request)
+{
+  var registrationEnabled =
+    _configuration.GetValue<bool>("Registration:Enabled");
+
+  if (!registrationEnabled)
+    return StatusCode(StatusCodes.Status403Forbidden, new
+    {
+      message = "הרשמה אינה זמינה כרגע."
+    });
+
+  var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
     var exists = await _db.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail);
     if (exists)

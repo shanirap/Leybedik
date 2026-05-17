@@ -2,6 +2,8 @@ using Leybedik.Api.Dtos.Imports;
 using Leybedik.Api.Services.Imports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Leybedik.Api.Options;
+using Microsoft.Extensions.Options;
 
 namespace Leybedik.Api.Controllers;
 
@@ -20,11 +22,15 @@ public class ImportsController : ControllerBase
     };
 
   private readonly IScanImportService _scanImportService;
+private readonly ScanImportOptions _scanImportOptions;
 
-  public ImportsController(IScanImportService scanImportService)
-  {
-    _scanImportService = scanImportService;
-  }
+public ImportsController(
+  IScanImportService scanImportService,
+  IOptions<ScanImportOptions> scanImportOptions)
+{
+  _scanImportService = scanImportService;
+  _scanImportOptions = scanImportOptions.Value;
+}
 
   [HttpPost("scan")]
   public async Task<ActionResult<ScanImportResponse>> ImportScan(
@@ -48,6 +54,10 @@ public class ImportsController : ControllerBase
 
     try
     {
+      if (!_scanImportOptions.Enabled)
+{
+  return NotFound(new { message = "פיצ׳ר יצירה מסריקה אינו פעיל כרגע." });
+}
       var result = await _scanImportService.ImportAsync(file, cancellationToken);
       return Ok(result);
     }
