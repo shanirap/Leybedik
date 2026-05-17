@@ -14,7 +14,9 @@ export interface SavedDocument {
    * Dynamic folder model from server.
    * null means the document is not inside any folder.
    */
-  folderId?: number | null;
+  rules?: {
+  'react-hooks/set-state-in-effect': 'off',
+},folderId?: number | null;
   folderName?: string | null;
 
   contentJson: EditorDocumentContent;

@@ -268,6 +268,50 @@ function findElement(
 
   return null;
 }
+function isAttachedToSongLine(element: EditorElement, songLineId: string): boolean {
+  return (
+    element.type === "symbol" &&
+    element.data.attachment?.songLineId === songLineId
+  );
+}
+
+function getSongLineBundle(page: PageJson, songLineId: string): EditorElement[] {
+  return page.elements.filter(
+    (element) =>
+      element.id === songLineId || isAttachedToSongLine(element, songLineId)
+  );
+}
+function getElementTemplateHeight(element: EditorElement): number {
+  if (element.type === "songLine") {
+    return 92;
+  }
+
+  if (element.type === "tabBlock") {
+    return 150;
+  }
+
+  return element.height;
+}
+
+function getNextTemplateElementPosition(page: PageJson): { x: number; y: number } {
+  const templateElements = page.elements
+    .filter((element) => element.type === "songLine" || element.type === "tabBlock")
+    .sort((a, b) => a.y - b.y);
+
+  const lastElement = templateElements.at(-1);
+
+  if (!lastElement) {
+    return {
+      x: TEMPLATE_LEFT,
+      y: FIRST_TEMPLATE_Y,
+    };
+  }
+
+  return {
+    x: TEMPLATE_LEFT,
+    y: lastElement.y + getElementTemplateHeight(lastElement) + TEMPLATE_GAP,
+  };
+}
 
 export function LeybedikStudio(props: LeybedikStudioProps) {
   const currentDocument = props.currentDocument ?? props.document;
@@ -316,42 +360,7 @@ useEffect(() => {
     titleRef.current = title;
   }, [title]);
 
-  useEffect(() => {
-  function handleKeyDown(event: KeyboardEvent) {
-    if (!selectedElementId) {
-      return;
-    }
 
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
-      return;
-    }
-
-    const selectedElement = editorStateRef.current.pages
-      .flatMap((page) => page.elements)
-      .find((element) => element.id === selectedElementId);
-
-    if (selectedElement?.type !== "symbol") {
-      return;
-    }
-
-    if (!selectedElement.data.attachment) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const step = event.shiftKey ? 8 : 2;
-    const deltaX = event.key === "ArrowLeft" ? -step : step;
-
-    moveAttachedSymbolHorizontally(selectedElement.id, deltaX);
-  }
-
-  window.addEventListener("keydown", handleKeyDown);
-
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown);
-  };
-}, [selectedElementId, moveAttachedSymbolHorizontally]);
 
 
   useEffect(() => {
@@ -362,7 +371,7 @@ useEffect(() => {
     setSelectedElementId(null);
     setSaveStatus("saved");
     setSaveErrorMessage(null);
-  }, [currentDocument.id, currentDocument.title, currentDocument.contentJson]);
+  }, [currentDocument.id, currentDocument.title,  currentDocument.folderId,  currentDocument.contentJson]);
 
   const selectedElementInfo = useMemo(
     () => findElement(editorState, selectedElementId),
@@ -424,19 +433,7 @@ async function handleSave(isAutosave = false) {
       void handleSaveRef.current(true);
     }, 900);
   }, []);
-function isAttachedToSongLine(element: EditorElement, songLineId: string): boolean {
-  return (
-    element.type === "symbol" &&
-    element.data.attachment?.songLineId === songLineId
-  );
-}
 
-function getSongLineBundle(page: PageJson, songLineId: string): EditorElement[] {
-  return page.elements.filter(
-    (element) =>
-      element.id === songLineId || isAttachedToSongLine(element, songLineId)
-  );
-}
 
 
 
@@ -694,8 +691,7 @@ useEffect(() => {
         }),
       };
     });
-  },
-  [updateDocumentState]
+  }, [updateDocumentState]
 );
 
 const findSongLineIdAtPoint = useCallback(
@@ -1036,37 +1032,8 @@ const addSongLine = useCallback(() => {
   setActivePageId(targetPageId);
   setSelectedElementId(element.id);
 }, [activePageId, updateDocumentState]);
-function getElementTemplateHeight(element: EditorElement): number {
-  if (element.type === "songLine") {
-    return 92;
-  }
 
-  if (element.type === "tabBlock") {
-    return 150;
-  }
 
-  return element.height;
-}
-
-function getNextTemplateElementPosition(page: PageJson): { x: number; y: number } {
-  const templateElements = page.elements
-    .filter((element) => element.type === "songLine" || element.type === "tabBlock")
-    .sort((a, b) => a.y - b.y);
-
-  const lastElement = templateElements.at(-1);
-
-  if (!lastElement) {
-    return {
-      x: TEMPLATE_LEFT,
-      y: FIRST_TEMPLATE_Y,
-    };
-  }
-
-  return {
-    x: TEMPLATE_LEFT,
-    y: lastElement.y + getElementTemplateHeight(lastElement) + TEMPLATE_GAP,
-  };
-}
 const addTabBlock = useCallback(() => {
   const pageId = activePageId;
   const page = editorStateRef.current.pages.find((p) => p.id === pageId);
@@ -1629,6 +1596,43 @@ function moveAttachedSymbolHorizontally(elementId: string, deltaX: number) {
   }));
 }
 
+  useEffect(() => {
+  function handleKeyDown(event: KeyboardEvent) {
+    if (!selectedElementId) {
+      return;
+    }
+
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
+    }
+
+    const selectedElement = editorStateRef.current.pages
+      .flatMap((page) => page.elements)
+      .find((element) => element.id === selectedElementId);
+
+    if (selectedElement?.type !== "symbol") {
+      return;
+    }
+
+    if (!selectedElement.data.attachment) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const step = event.shiftKey ? 8 : 2;
+    const deltaX = event.key === "ArrowLeft" ? -step : step;
+
+    moveAttachedSymbolHorizontally(selectedElement.id, deltaX);
+  }
+
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [selectedElementId]);
   const moveElement = useCallback(
   (pageId: string, elementId: string, x: number, y: number) => {
     updateDocumentState((current) => ({
@@ -1753,11 +1757,19 @@ const addImage = useCallback(() => {
   imageInputRef.current?.click();
 }, []);
 
-  const handlePrint = useCallback(() => {
+ const handlePrint = useCallback(() => {
   setSelectedElementId(null);
+  document.body.classList.add("pdf-export-mode");
+
+  const cleanup = () => {
+    document.body.classList.remove("pdf-export-mode");
+  };
+
+  window.addEventListener("afterprint", cleanup, { once: true });
+
   window.setTimeout(() => {
     window.print();
-  }, 80);
+  }, 150);
 }, []);
 function handleBackToDocuments() {
 const isTempDocument = currentDocument
