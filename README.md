@@ -1,73 +1,62 @@
-# React + TypeScript + Vite
+# Leybedik Studio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+עורך מוזיקלי לשירים, אקורדים וטאבים — React (Vite) + ASP.NET Core API.
 
-Currently, two official plugins are available:
+## פיתוח מקומי
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### דרישות
+- Node.js 20+
+- .NET 8 SDK
+- SQL Server (פיתוח) או SQLite (מצב Local)
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Frontend
+```powershell
+cd client
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Backend
+```powershell
+cd server\Leybedik.Api
+dotnet run --launch-profile http
 ```
+
+ברירת מחדל בפיתוח: `http://localhost:5299` (Swagger), ה-frontend בדרך כלל על `http://localhost:5173`.
+
+### בדיקות
+```powershell
+cd client
+npm run lint
+npm test
+npm run build
+
+cd ..\server\Leybedik.Api.Tests
+dotnet test
+```
+
+## פריסה מקומית (Windows — מחשב יחיד)
+
+1. הריצו `deploy\build-production.ps1` — בונה client, מעתיק ל-`wwwroot`, מפרסם `win-x64`, ויוצר `deploy\LeybedikLocal-win-x64.zip`.
+2. חלצו את ה-ZIP והריצו `01-Install-Local.cmd` ואז `02-Start-Local.cmd`.
+3. פרטים מלאים: [`deploy/README-INSTALL.txt`](deploy/README-INSTALL.txt).
+
+הגדרות לדוגמה (ללא סודות): [`server/Leybedik.Api/appsettings.Local.json.example`](server/Leybedik.Api/appsettings.Local.json.example).
+
+## מבנה הפרויקט
+
+| תיקייה | תוכן |
+|--------|------|
+| `client/` | React + TypeScript + Vitest |
+| `server/Leybedik.Api/` | ASP.NET Core API |
+| `server/Leybedik.Api.Tests/` | בדיקות xUnit |
+| `deploy/` | סקריפטי build והתקנה מקומית |
+| `TEST_PLAN.md` | רשימת בדיקות ידניות |
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`): lint + tests + build בצד לקוח, `dotnet test` בשרת — על push/PR ל-`main`/`master`.
+
+## הערות חבילה
+
+אל תכללו ב-ZIP לבדיקה/שיתוף: `node_modules`, `dist`, `.git`, ארטיפקטי publish ישנים. השתמשו ב-`build-production.ps1` לחבילה נקייה.

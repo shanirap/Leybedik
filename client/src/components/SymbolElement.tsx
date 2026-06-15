@@ -15,6 +15,7 @@ interface SymbolElementProps {
   page: PageJson;
   element: SymbolElementType;
   isSelected: boolean;
+  lockVerticalDrag?: boolean;
   onSelect: () => void;
   onMove: (x: number, y: number) => void;
   onResize: (width: number, height: number) => void;
@@ -29,6 +30,7 @@ export function SymbolElement({
   page,
   element,
   isSelected,
+  lockVerticalDrag = false,
   onSelect,
   onMove,
   onResize,
@@ -64,6 +66,7 @@ onMouseDown={(event) => {
     elementY: element.y,
     elementWidth: element.width,
     elementHeight: element.height,
+    lockVerticalDrag,
     onMove,
   });
 }}

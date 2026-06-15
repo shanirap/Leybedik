@@ -35,6 +35,10 @@ public class FoldersBehaviorTests : IClassFixture<TestAppFactory>
     });
 
     Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
+
+    var duplicateError = await secondResponse.Content.ReadFromJsonAsync<ApiMessageResponse>();
+    Assert.NotNull(duplicateError);
+    Assert.Contains("כבר קיימת תיקייה", duplicateError!.message);
   }
 
   [Fact]
@@ -177,6 +181,101 @@ public class FoldersBehaviorTests : IClassFixture<TestAppFactory>
     Assert.Equal(2, returnedFolder.documentsCount);
   }
 
+  [Fact]
+  public async Task DeleteFolder_WhenEmpty_RemovesFolder()
+  {
+    var token = await RegisterAndGetTokenAsync("delete-empty-folder@test.local");
+
+    _client.DefaultRequestHeaders.Authorization =
+      new AuthenticationHeaderValue("Bearer", token);
+
+    var createResponse = await _client.PostAsJsonAsync("/api/folders", new
+    {
+      name = "ריקה"
+    });
+
+    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+    var folder = await createResponse.Content.ReadFromJsonAsync<FolderResponse>();
+    Assert.NotNull(folder);
+
+    var deleteResponse = await _client.DeleteAsync($"/api/folders/{folder!.id}");
+
+    Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+    var foldersResponse = await _client.GetAsync("/api/folders");
+
+    Assert.Equal(HttpStatusCode.OK, foldersResponse.StatusCode);
+
+    var folders = await foldersResponse.Content.ReadFromJsonAsync<List<FolderResponse>>();
+
+    Assert.NotNull(folders);
+    Assert.Empty(folders!);
+  }
+
+  [Fact]
+  public async Task DeleteFolder_WithDocuments_ReturnsConflict()
+  {
+    var token = await RegisterAndGetTokenAsync("delete-folder-with-docs@test.local");
+
+    _client.DefaultRequestHeaders.Authorization =
+      new AuthenticationHeaderValue("Bearer", token);
+
+    var createFolderResponse = await _client.PostAsJsonAsync("/api/folders", new
+    {
+      name = "עמוסה"
+    });
+
+    Assert.Equal(HttpStatusCode.OK, createFolderResponse.StatusCode);
+
+    var folder = await createFolderResponse.Content.ReadFromJsonAsync<FolderResponse>();
+    Assert.NotNull(folder);
+
+    var createDocResponse = await _client.PostAsJsonAsync("/api/documents", new
+    {
+      title = "מסמך בתיקייה",
+      folderId = folder!.id,
+      contentJson = """{"version":1,"blocks":[],"pages":[]}"""
+    });
+
+    Assert.Equal(HttpStatusCode.OK, createDocResponse.StatusCode);
+
+    var deleteResponse = await _client.DeleteAsync($"/api/folders/{folder.id}");
+
+    Assert.Equal(HttpStatusCode.Conflict, deleteResponse.StatusCode);
+
+    var deleteError = await deleteResponse.Content.ReadFromJsonAsync<ApiMessageResponse>();
+    Assert.NotNull(deleteError);
+    Assert.Contains("מסמכים", deleteError!.message);
+  }
+
+  [Fact]
+  public async Task DeleteFolder_OtherUsersFolder_ReturnsNotFound()
+  {
+    var userAToken = await RegisterAndGetTokenAsync("delete-folder-a@test.local");
+    var userBToken = await RegisterAndGetTokenAsync("delete-folder-b@test.local");
+
+    _client.DefaultRequestHeaders.Authorization =
+      new AuthenticationHeaderValue("Bearer", userAToken);
+
+    var createResponse = await _client.PostAsJsonAsync("/api/folders", new
+    {
+      name = "פרטית"
+    });
+
+    Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+
+    var folder = await createResponse.Content.ReadFromJsonAsync<FolderResponse>();
+    Assert.NotNull(folder);
+
+    _client.DefaultRequestHeaders.Authorization =
+      new AuthenticationHeaderValue("Bearer", userBToken);
+
+    var deleteResponse = await _client.DeleteAsync($"/api/folders/{folder!.id}");
+
+    Assert.Equal(HttpStatusCode.NotFound, deleteResponse.StatusCode);
+  }
+
   private async Task<string> RegisterAndGetTokenAsync(string email)
   {
     var response = await _client.PostAsJsonAsync("/api/auth/register", new
@@ -208,5 +307,10 @@ public class FoldersBehaviorTests : IClassFixture<TestAppFactory>
     public int id { get; set; }
     public string name { get; set; } = string.Empty;
     public int documentsCount { get; set; }
+  }
+
+  private sealed class ApiMessageResponse
+  {
+    public string message { get; set; } = string.Empty;
   }
 }

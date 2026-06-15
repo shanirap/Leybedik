@@ -12,7 +12,7 @@ export interface DragOptions {
   elementHeight: number;
   onMove: (x: number, y: number) => void;
   onDrop?: (clientX: number, clientY: number) => void;
-
+  lockVerticalDrag?: boolean;
 }
 
 export interface ResizeOptions {
@@ -55,11 +55,13 @@ export function startElementDrag(event: ReactMouseEvent<HTMLElement>, options: D
       options.page.width - options.elementWidth
     );
 
-    const nextY = clamp(
-      options.elementY + deltaY,
-      0,
-      options.page.height - options.elementHeight
-    );
+    const nextY = options.lockVerticalDrag
+      ? options.elementY
+      : clamp(
+          options.elementY + deltaY,
+          0,
+          options.page.height - options.elementHeight
+        );
 
     options.onMove(nextX, nextY);
   }

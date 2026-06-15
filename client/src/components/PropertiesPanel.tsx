@@ -5,6 +5,14 @@ import type {
   TabBlockElement,
   TextBoxElement,
 } from "../types/editorDocument";
+import {
+  applyStyleToLyricsSelection,
+  type LyricsUnderlineStyle,
+} from "../utils/lyricsStyleSpans";
+import {
+  getChordLineFontSize,
+  setChordLineFontSizeOverride,
+} from "../utils/songLineChordUtils";
 
 const FONT_OPTIONS = [
   { label: "Arial", value: "Arial, sans-serif" },
@@ -19,6 +27,10 @@ const FONT_OPTIONS = [
 
 interface PropertiesPanelProps {
   selectedElement: EditorElement | null;
+  songLineLyricsSelection: {
+    start: number;
+    end: number;
+  } | null;
   onUpdateElement: (patch: Partial<EditorElement>) => void;
   onUpdateElementData: <T extends EditorElement>(
     updater: (element: T) => T
@@ -30,6 +42,7 @@ interface PropertiesPanelProps {
 
 export function PropertiesPanel({
   selectedElement,
+  songLineLyricsSelection,
   onUpdateElement,
   onUpdateElementData,
   onDelete,
@@ -61,6 +74,7 @@ export function PropertiesPanel({
           {selectedElement.type === "songLine" ? (
             <SongLineProperties
               element={selectedElement}
+              lyricsSelection={songLineLyricsSelection}
               onUpdateElementData={onUpdateElementData}
             />
           ) : null}
@@ -271,14 +285,45 @@ function TextBoxProperties({
 
 function SongLineProperties({
   element,
+  lyricsSelection,
   onUpdateElementData,
 }: {
   element: SongLineElement;
+  lyricsSelection: {
+    start: number;
+    end: number;
+  } | null;
   onUpdateElementData: <T extends EditorElement>(
     updater: (element: T) => T
   ) => void;
 }) {
   const data = element.data;
+  const isGuitar = data.instrument === "guitar";
+  const hasLyricsSelection =
+    lyricsSelection !== null && lyricsSelection.start !== lyricsSelection.end;
+
+  function applyLyricsStyle(patch: {
+    bold?: boolean;
+    underline?: LyricsUnderlineStyle;
+  }) {
+    if (!hasLyricsSelection || !lyricsSelection) {
+      return;
+    }
+
+    onUpdateElementData<SongLineElement>((current) => ({
+      ...current,
+      data: {
+        ...current.data,
+        lyricsStyleSpans: applyStyleToLyricsSelection(
+          current.data.lyricsStyleSpans,
+          current.data.lyrics.length,
+          lyricsSelection.start,
+          lyricsSelection.end,
+          patch
+        ),
+      },
+    }));
+  }
 
   return (
     <section className="properties-section">
@@ -309,7 +354,7 @@ function SongLineProperties({
   }
 />
       <NumberField
-        label="גודל אקורדים"
+        label="גודל אקורדים (ברירת מחדל)"
         value={data.chordFontSize}
         onChange={(value) =>
           onUpdateElementData<SongLineElement>((current) => ({
@@ -318,6 +363,44 @@ function SongLineProperties({
           }))
         }
       />
+      <NumberField
+        label="גודל — אקורדים עליון"
+        value={getChordLineFontSize(data, "aboveTop")}
+        onChange={(value) =>
+          onUpdateElementData<SongLineElement>((current) => ({
+            ...current,
+            data: setChordLineFontSizeOverride(current.data, "aboveTop", value),
+          }))
+        }
+      />
+      {!isGuitar ? (
+        <>
+          <NumberField
+            label="גודל — אקורדים מעל"
+            value={getChordLineFontSize(data, "aboveBottom")}
+            onChange={(value) =>
+              onUpdateElementData<SongLineElement>((current) => ({
+                ...current,
+                data: setChordLineFontSizeOverride(
+                  current.data,
+                  "aboveBottom",
+                  value
+                ),
+              }))
+            }
+          />
+          <NumberField
+            label="גודל — אקורדים מתחת"
+            value={getChordLineFontSize(data, "below")}
+            onChange={(value) =>
+              onUpdateElementData<SongLineElement>((current) => ({
+                ...current,
+                data: setChordLineFontSizeOverride(current.data, "below", value),
+              }))
+            }
+          />
+        </>
+      ) : null}
 <SelectField
   label="פונט אקורדים"
   value={data.chordFontFamily ?? data.lyricsFontFamily}
@@ -354,52 +437,80 @@ function SongLineProperties({
         }
       />
 
-      <SelectField
-        label="יישור"
-        value={data.lyricsAlign}
-        options={[
-          { value: "left", label: "שמאל" },
-          { value: "center", label: "מרכז" },
-          { value: "right", label: "ימין" },
-        ]}
-        onChange={(value) =>
-          onUpdateElementData<SongLineElement>((current) => ({
-            ...current,
-            data: {
-              ...current.data,
-              lyricsAlign: value as SongLineElement["data"]["lyricsAlign"],
-            },
-          }))
-        }
-      />
+      {!isGuitar ? (
+        <>
+          <SelectField
+            label="יישור"
+            value={data.lyricsAlign}
+            options={[
+              { value: "left", label: "שמאל" },
+              { value: "center", label: "מרכז" },
+              { value: "right", label: "ימין" },
+            ]}
+            onChange={(value) =>
+              onUpdateElementData<SongLineElement>((current) => ({
+                ...current,
+                data: {
+                  ...current.data,
+                  lyricsAlign: value as SongLineElement["data"]["lyricsAlign"],
+                },
+              }))
+            }
+          />
 
-      <SelectField
-        label="כיוון"
-        value={data.direction}
-        options={[
-          { value: "ltr", label: "שמאל לימין" },
-          { value: "rtl", label: "ימין לשמאל" },
-        ]}
-        onChange={(value) =>
-          onUpdateElementData<SongLineElement>((current) => ({
-            ...current,
-            data: {
-              ...current.data,
-              direction: value as SongLineElement["data"]["direction"],
-            },
-          }))
-        }
-      />
+          <SelectField
+            label="כיוון"
+            value={data.direction}
+            options={[
+              { value: "ltr", label: "שמאל לימין" },
+              { value: "rtl", label: "ימין לשמאל" },
+            ]}
+            onChange={(value) =>
+              onUpdateElementData<SongLineElement>((current) => ({
+                ...current,
+                data: {
+                  ...current.data,
+                  direction: value as SongLineElement["data"]["direction"],
+                },
+              }))
+            }
+          />
+        </>
+      ) : null}
+
+      <div className="properties-note">
+        סמני מילים בשורה ואז החילי הדגשה או קו תחתון על הבחירה בלבד.
+        {!hasLyricsSelection ? " (אין בחירת טקסט כרגע)" : null}
+      </div>
 
       <CheckField
-        label="מילים מודגשות"
-        checked={data.lyricsBold}
-        onChange={(checked) =>
-          onUpdateElementData<SongLineElement>((current) => ({
-            ...current,
-            data: { ...current.data, lyricsBold: checked },
-          }))
-        }
+        label="הדגשת בחירה"
+        checked={false}
+        disabled={!hasLyricsSelection}
+        onChange={(checked) => {
+          applyLyricsStyle({ bold: checked });
+        }}
+      />
+
+      <SelectField
+        label="קו תחתון לבחירה"
+        value=""
+        disabled={!hasLyricsSelection}
+        options={[
+          { value: "", label: "בחרי להחלה..." },
+          { value: "none", label: "ללא" },
+          { value: "solid", label: "קו" },
+          { value: "dashed", label: "קו מקוקו" },
+        ]}
+        onChange={(value) => {
+          if (!value) {
+            return;
+          }
+
+          applyLyricsStyle({
+            underline: value as LyricsUnderlineStyle,
+          });
+        }}
       />
 
       <div className="properties-note">
@@ -590,16 +701,22 @@ function SelectField({
   value,
   options,
   onChange,
+  disabled = false,
 }: {
   label: string;
   value: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="property-field">
       <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -614,16 +731,19 @@ function CheckField({
   label,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <label className="property-field checkbox-field">
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
       />
       <span>{label}</span>

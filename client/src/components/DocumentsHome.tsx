@@ -7,6 +7,7 @@ import {
 } from "../api/documentsApi";
 import {
   createFolder,
+  deleteFolder,
   getFolders,
   updateFolder,
 } from "../api/foldersApi";
@@ -209,6 +210,41 @@ const openedFolder =
     }
   }
 
+  function getFolderDocumentsCount(folderId: number): number {
+    return documents.filter((doc) => doc.folderId === folderId).length;
+  }
+
+  function isFolderEmpty(folder: DocumentFolder): boolean {
+    return (
+      folder.documentsCount === 0 && getFolderDocumentsCount(folder.id) === 0
+    );
+  }
+
+  async function handleDeleteFolder(folder: DocumentFolder) {
+    if (!isFolderEmpty(folder)) {
+      alert("לא ניתן למחוק תיקייה שיש בה מסמכים");
+      return;
+    }
+
+    const confirmed = confirm(`למחוק את התיקייה "${folder.name}"?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteFolder(folder.id);
+      setFolders((current) => current.filter((item) => item.id !== folder.id));
+
+      if (openedFolderId === folder.id) {
+        setSearchText("");
+        setOpenedFolderId(null);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "שגיאה במחיקת תיקייה");
+    }
+  }
+
   const initialLoading = loading && documents.length === 0 && !error;
   const loadFailedEmpty = !loading && error !== null && documents.length === 0;
 
@@ -363,22 +399,44 @@ const openedFolder =
                       מסמכים
                     </span>
 
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      className="documents-folder-rename"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleRenameFolder(folder);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
+                    <span className="documents-folder-actions">
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="documents-folder-action"
+                        onClick={(event) => {
                           event.stopPropagation();
                           void handleRenameFolder(folder);
-                        }
-                      }}
-                    >
-                      שנה שם
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.stopPropagation();
+                            void handleRenameFolder(folder);
+                          }
+                        }}
+                      >
+                        שנה שם
+                      </span>
+
+                      {isFolderEmpty(folder) ? (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          className="documents-folder-action documents-folder-action-delete"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleDeleteFolder(folder);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.stopPropagation();
+                              void handleDeleteFolder(folder);
+                            }
+                          }}
+                        >
+                          מחק
+                        </span>
+                      ) : null}
                     </span>
                   </button>
                 ))}
@@ -414,13 +472,25 @@ const openedFolder =
 </h2>
 
                   {openedFolder ? (
-                    <button
-                      type="button"
-                      className="documents-folder-back"
-                      onClick={() => void handleRenameFolder(openedFolder)}
-                    >
-                      שנה שם
-                    </button>
+                    <div className="documents-folder-open-actions">
+                      <button
+                        type="button"
+                        className="documents-folder-back"
+                        onClick={() => void handleRenameFolder(openedFolder)}
+                      >
+                        שנה שם
+                      </button>
+
+                      {isFolderEmpty(openedFolder) ? (
+                        <button
+                          type="button"
+                          className="documents-folder-back documents-folder-delete"
+                          onClick={() => void handleDeleteFolder(openedFolder)}
+                        >
+                          מחק תיקייה
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
 

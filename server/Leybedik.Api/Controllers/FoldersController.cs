@@ -68,7 +68,7 @@ public class FoldersController : ControllerBase
 
     if (string.IsNullOrWhiteSpace(name))
     {
-      return BadRequest("שם תיקייה הוא שדה חובה.");
+      return BadRequest(new { message = "שם תיקייה הוא שדה חובה." });
     }
 
     var exists = await _db.DocumentFolders.AnyAsync(folder =>
@@ -77,7 +77,7 @@ public class FoldersController : ControllerBase
 
     if (exists)
     {
-      return Conflict("כבר קיימת תיקייה בשם הזה.");
+      return Conflict(new { message = "כבר קיימת תיקייה בשם הזה." });
     }
 
     var now = DateTime.UtcNow;
@@ -119,7 +119,7 @@ public class FoldersController : ControllerBase
 
     if (string.IsNullOrWhiteSpace(name))
     {
-      return BadRequest("שם תיקייה הוא שדה חובה.");
+      return BadRequest(new { message = "שם תיקייה הוא שדה חובה." });
     }
 
     var folder = await _db.DocumentFolders.FirstOrDefaultAsync(item =>
@@ -138,7 +138,7 @@ public class FoldersController : ControllerBase
 
     if (exists)
     {
-      return Conflict("כבר קיימת תיקייה בשם הזה.");
+      return Conflict(new { message = "כבר קיימת תיקייה בשם הזה." });
     }
 
     folder.Name = name;
@@ -156,5 +156,41 @@ public class FoldersController : ControllerBase
       Name = folder.Name,
       DocumentsCount = count,
     });
+  }
+
+  [HttpDelete("{id:int}")]
+  public async Task<IActionResult> Delete(int id)
+  {
+    var userId = GetUserId();
+
+    if (userId is null)
+    {
+      return Unauthorized();
+    }
+
+    var folder = await _db.DocumentFolders.FirstOrDefaultAsync(item =>
+      item.Id == id &&
+      item.OwnerUserId == userId.Value);
+
+    if (folder is null)
+    {
+      return NotFound();
+    }
+
+    var documentsCount = await _db.Documents.CountAsync(document =>
+      document.OwnerUserId == userId.Value &&
+      document.FolderId == folder.Id);
+
+    if (documentsCount > 0)
+    {
+      return Conflict(new { message = "לא ניתן למחוק תיקייה שיש בה מסמכים." });
+    }
+
+    folder.IsDeleted = true;
+    folder.UpdatedAt = DateTime.UtcNow;
+
+    await _db.SaveChangesAsync();
+
+    return NoContent();
   }
 }

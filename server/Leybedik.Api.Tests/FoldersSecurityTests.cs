@@ -34,6 +34,14 @@ public class FoldersSecurityTests : IClassFixture<TestAppFactory>
   }
 
   [Fact]
+  public async Task DeleteFolder_WithoutToken_ReturnsUnauthorized()
+  {
+    var response = await _client.DeleteAsync("/api/folders/1");
+
+    Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+  }
+
+  [Fact]
   public async Task CreateFolder_WithToken_CreatesFolder()
   {
     var token = await RegisterAndGetTokenAsync("a@test.local");

@@ -61,4 +61,68 @@ renderDocumentFromJson(content, container);
   expect(roundTrip.blocks).toEqual([]);
   expect(roundTrip.pages).toBeDefined();
 });
+
+it("preserves song line chordLineFontSizes and lyricsStyleSpans in JSON roundtrip", () => {
+  const content = createEmptyEditorContent();
+  content.pages[0].elements = [
+    {
+      id: "song-line-1",
+      type: "songLine",
+      x: 40,
+      y: 80,
+      width: 500,
+      height: 78,
+      zIndex: 1,
+      data: {
+        lyrics: "שלום",
+        lyricsFontSize: 19,
+        lyricsFontFamily: "Arial",
+        lyricsColor: "#111827",
+        lyricsBold: false,
+        lyricsAlign: "right",
+        direction: "rtl",
+        chords: [],
+        chordFontSize: 14,
+        chordColor: "#111827",
+        chordLineFontSizes: {
+          aboveTop: 16,
+          below: 12,
+        },
+        lyricsStyleSpans: [
+          {
+            id: "span-0-3",
+            start: 0,
+            end: 3,
+            bold: true,
+          },
+        ],
+        chordLines: {
+          aboveTop: "Am",
+          aboveBottom: "",
+          below: "G",
+        },
+      },
+    },
+  ];
+
+  const serialized = JSON.stringify(content);
+  const parsed = JSON.parse(serialized) as typeof content;
+  const songLine = parsed.pages[0].elements[0];
+
+  expect(songLine.type).toBe("songLine");
+  if (songLine.type === "songLine") {
+    expect(songLine.data.chordLineFontSizes).toEqual({
+      aboveTop: 16,
+      below: 12,
+    });
+    expect(songLine.data.lyricsStyleSpans).toEqual([
+      {
+        id: "span-0-3",
+        start: 0,
+        end: 3,
+        bold: true,
+      },
+    ]);
+  }
+});
 });

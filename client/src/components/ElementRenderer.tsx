@@ -71,6 +71,7 @@ onAddAttachedSmallSharpToSongLine: (
   height?: number
 ) => void;
 onDrop?: (clientX: number, clientY: number) => void;
+onLyricsSelectionChange?: (start: number, end: number) => void;
 }
 
 export function ElementRenderer({
@@ -91,6 +92,7 @@ export function ElementRenderer({
   onAddAttachedRepeatEndToSongLine,
   onAddAttachedSmallSharpToSongLine,
   onDrop,
+  onLyricsSelectionChange,
 }: ElementRendererProps) {
   const commonProps = {
     page,
@@ -152,6 +154,7 @@ if (element.type === "songLine") {
       onAddAttachedArrowToSongLine={onAddAttachedArrowToSongLine}
       onAddAttachedRepeatEndToSongLine={onAddAttachedRepeatEndToSongLine}
       onAddAttachedSmallSharpToSongLine={onAddAttachedSmallSharpToSongLine}
+      onLyricsSelectionChange={onLyricsSelectionChange}
     />
   );
 }
@@ -189,6 +192,7 @@ if (element.type === "symbol") {
     <SymbolElement
       {...commonProps}
       element={positionedElement}
+      lockVerticalDrag={Boolean(symbolElement.data.attachment)}
       onUpdate={(patch) => onUpdate(patch as Partial<EditorElement>)}
       onUpdateData={(updater) => onUpdateData<SymbolElementType>(updater)}
     />

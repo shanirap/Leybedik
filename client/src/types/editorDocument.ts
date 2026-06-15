@@ -81,6 +81,14 @@ export interface SongLineMark {
   yOffset?: number;
 }
 
+export interface SongLyricsStyleSpan {
+  id: string;
+  start: number;
+  end: number;
+  bold?: boolean;
+  underline?: "solid" | "dashed";
+}
+
 export interface SongInlineMark {
   id: string;
   type: "circle";
@@ -96,6 +104,8 @@ export interface SongLineElement extends BaseElement {
     lyricsFontFamily: string;
     lyricsColor: string;
     lyricsBold: boolean;
+    lyricsUnderline?: "none" | "solid" | "dashed";
+    lyricsStyleSpans?: SongLyricsStyleSpan[];
     lyricsAlign: "right" | "center" | "left";
     direction: "rtl" | "ltr";
     chords: SongLineChord[];
@@ -104,6 +114,11 @@ export interface SongLineElement extends BaseElement {
     chordFontSize: number;
     chordColor: string;
     chordFontFamily?: string;
+    chordLineFontSizes?: {
+      aboveTop?: number;
+      aboveBottom?: number;
+      below?: number;
+    };
     chordLines?: {
   aboveTop?: string;
   aboveBottom?: string;

@@ -87,6 +87,11 @@ onDropElement: (
   clientX: number,
   clientY: number
 ) => void;
+onSongLineLyricsSelectionChange: (
+  elementId: string,
+  start: number,
+  end: number
+) => void;
 }
 
 export function EditorCanvas({
@@ -108,6 +113,7 @@ export function EditorCanvas({
   onAddAttachedRepeatEndToSongLine,
   onAddAttachedSmallSharpToSongLine,
   onDropElement,
+  onSongLineLyricsSelectionChange,
 }: EditorCanvasProps) {
   return (
     <div
@@ -140,6 +146,7 @@ export function EditorCanvas({
           onAddAttachedRepeatEndToSongLine={onAddAttachedRepeatEndToSongLine}
           onAddAttachedSmallSharpToSongLine={onAddAttachedSmallSharpToSongLine}
           onDropElement={onDropElement}
+          onSongLineLyricsSelectionChange={onSongLineLyricsSelectionChange}
         />
       ))}
     </div>

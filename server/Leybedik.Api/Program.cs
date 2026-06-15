@@ -47,10 +47,27 @@ builder.Services.AddSwaggerGen(options =>
   });
 });
 
+var databaseProvider = builder.Configuration.GetValue<string>("Database:Provider") ?? "SqlServer";
+
 builder.Services.AddDbContext<LeybedikDbContext>(options =>
-  options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+  if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+  {
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+  }
+  else if (string.Equals(databaseProvider, "SqlServer", StringComparison.OrdinalIgnoreCase))
+  {
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+  }
+  else
+  {
+    throw new InvalidOperationException($"Unsupported database provider: {databaseProvider}");
+  }
+});
 
 builder.Services.AddScoped<JwtService>();
+builder.Services.AddHostedService<DatabaseInitializerService>();
+builder.Services.AddHostedService<BootstrapInitialUserService>();
 builder.Services.AddScoped<ScanImportContentValidator>();
 builder.Services.AddScoped<ScanImportContentNormalizer>();
 builder.Services.AddScoped<ScanImportPromptBuilder>();

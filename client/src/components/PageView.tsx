@@ -87,6 +87,11 @@ onDropElement: (
   clientX: number,
   clientY: number
 ) => void;
+onSongLineLyricsSelectionChange: (
+  elementId: string,
+  start: number,
+  end: number
+) => void;
 }
 
 function PageFixedBlank() {
@@ -122,6 +127,7 @@ export function PageView({
   onAddAttachedRepeatEndToSongLine,
   onAddAttachedSmallSharpToSongLine,
   onDropElement,
+  onSongLineLyricsSelectionChange,
 }: PageViewProps) {
   return (
     <section className="page-shell">
@@ -169,6 +175,9 @@ export function PageView({
             onAddAttachedRepeatEndToSongLine={onAddAttachedRepeatEndToSongLine}
             onAddAttachedSmallSharpToSongLine={onAddAttachedSmallSharpToSongLine}
             onDrop={(clientX, clientY) => onDropElement(page.id, element.id, clientX, clientY)}
+            onLyricsSelectionChange={(start, end) =>
+              onSongLineLyricsSelectionChange(element.id, start, end)
+            }
           />
         ))}
       </div>

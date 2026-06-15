@@ -69,6 +69,10 @@ server/Leybedik.Api/wwwroot/
 
 # Production secrets / local production config
 server/Leybedik.Api/appsettings.Production.json
+server/Leybedik.Api/appsettings.Local.json
 # Deployment artifacts
 deploy-to-it/
 LeybedikDeployToIT.zip
+deploy/out/
+deploy/LeybedikLocal-win-x64.zip
+publish/

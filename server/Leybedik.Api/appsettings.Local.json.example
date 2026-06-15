@@ -1,0 +1,35 @@
+{
+  "Database": {
+    "Provider": "Sqlite",
+    "AutoMigrate": true
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=C:\\LeybedikLocal\\Data\\leybedik.db"
+  },
+  "AllowedHosts": "*",
+  "AllowedOrigins": [],
+  "Registration": {
+    "Enabled": false
+  },
+  "BootstrapUser": {
+    "Enabled": true,
+    "Email": "admin@leybedik.local",
+    "DisplayName": "מנהל מערכת",
+    "Password": "ChangeMe123!"
+  },
+  "Jwt": {
+    "Key": "REPLACE_WITH_A_LONG_RANDOM_KEY_AT_LEAST_32_CHARS",
+    "Issuer": "Leybedik.Api",
+    "Audience": "Leybedik.Client",
+    "ExpiresDays": 7
+  },
+  "ScanImport": {
+    "Enabled": false,
+    "Provider": "Mock"
+  },
+  "AiScanImport": {
+    "Provider": "Gemini",
+    "Model": "gemini-2.5-flash",
+    "Endpoint": "https://generativelanguage.googleapis.com"
+  }
+}

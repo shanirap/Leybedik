@@ -1,15 +1,32 @@
-import { useRef,useState   } from "react";
+import { useLayoutEffect, useRef,useState   } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import type {
   PageJson,
   SongLineElement as SongLineElementType,
 } from "../types/editorDocument";
 import {
+  buildLyricsRuns,
+  reconcileSpansOnTextChange,
+} from "../utils/lyricsStyleSpans";
+import {
+  buildLyricsEditorFragment,
+  getCharacterCenterRelativeTo,
+  getClickedCharacterIndexInEditor,
+  getLyricsCaretCenterRelativeTo,
+  getSelectionOffsets,
+  setSelectionOffsets,
+} from "../utils/lyricsEditorUtils";
+import {
   getElementFrameStyle,
   startElementDrag,
   startElementResize,
   stopEditorEvent,
 } from "./elementViewUtils";
+import { getChordLineFontSize } from "../utils/songLineChordUtils";
+import {
+  ATTACHED_LYRICS_ROW_Y,
+  SONG_LINE_HEIGHT,
+} from "../constants/songLineLayout";
 
 
 interface SongLineElementProps {
@@ -71,9 +88,9 @@ onAddAttachedSmallSharpToSongLine: (
   height?: number
 ) => void;
 onDrop?: (clientX: number, clientY: number) => void;
+onLyricsSelectionChange?: (start: number, end: number) => void;
 }
 
-const SONG_LINE_HEIGHT = 92;
 const MIN_WIDTH = 180;
 
 type ChordLineKey = "aboveTop" | "aboveBottom" | "below";
@@ -86,6 +103,7 @@ function shouldNotStartDrag(target: EventTarget | null): boolean {
   return Boolean(
     target.closest("input") ||
       target.closest("textarea") ||
+      target.closest("[contenteditable='true']") ||
       target.closest("button")
   );
 }
@@ -107,14 +125,17 @@ export function SongLineElement({
   onAddAttachedRepeatEndToSongLine,
   onAddAttachedSmallSharpToSongLine,
   onDrop,
+  onLyricsSelectionChange,
 }: SongLineElementProps) {
 const data = element.data;
 const isGuitar = data.instrument === "guitar";
 const direction = isGuitar ? "rtl" : data.direction;
 const textAlign = isGuitar ? "right" : data.lyricsAlign;
-const chordDirection = isGuitar ? "rtl" : "ltr";
-const chordTextAlign = isGuitar ? "right" : "left";
-const lyricsInputRef = useRef<HTMLInputElement | null>(null);
+const chordDirection = "ltr";
+const chordTextAlign = "left";
+const lyricsEditorRef = useRef<HTMLDivElement | null>(null);
+const lastLyricsCaretRef = useRef(0);
+const lastRenderedSpansKeyRef = useRef("");
 const [circleMenu, setCircleMenu] = useState<{
   screenX: number;
   screenY: number;
@@ -130,12 +151,81 @@ const [circleMenu, setCircleMenu] = useState<{
     below: "",
   };
 
+  function syncLyricsSelection() {
+    const editor = lyricsEditorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    const { start, end } = getSelectionOffsets(editor);
+    lastLyricsCaretRef.current = start;
+    onLyricsSelectionChange?.(start, end);
+  }
+
+  function placeAttachedSmallSharpAtLastCaret() {
+    const editor = lyricsEditorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    const songLineElement = editor.closest(".song-line-element");
+
+    if (!(songLineElement instanceof HTMLElement)) {
+      return;
+    }
+
+    const center = getLyricsCaretCenterRelativeTo(
+      editor,
+      lastLyricsCaretRef.current,
+      songLineElement
+    );
+
+    if (!center) {
+      return;
+    }
+
+    const width = 11;
+    const height = 13;
+
+    onAddAttachedSmallSharpToSongLine(
+      page.id,
+      element.id,
+      center.x - width / 2,
+      center.y - ATTACHED_LYRICS_ROW_Y - height / 2,
+      width,
+      height
+    );
+  }
+
+  function handleLyricsInput() {
+    const editor = lyricsEditorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    const lyrics = editor.textContent ?? "";
+
+    if (lyrics === data.lyrics) {
+      return;
+    }
+
+    updateLyrics(lyrics);
+  }
+
   function updateLyrics(lyrics: string) {
     onUpdateData((current) => ({
       ...current,
       data: {
         ...current.data,
         lyrics,
+        lyricsStyleSpans: reconcileSpansOnTextChange(
+          current.data.lyrics,
+          lyrics,
+          current.data.lyricsStyleSpans
+        ),
       },
     }));
   }
@@ -214,163 +304,44 @@ const [circleMenu, setCircleMenu] = useState<{
       event.preventDefault();
     }
   }
-function getInputFont(input: HTMLInputElement): string {
-  const style = window.getComputedStyle(input);
 
-  return `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-}
-
-function measureTextWidth(input: HTMLInputElement, text: string): number {
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    return text.length * 10;
-  }
-
-  context.font = getInputFont(input);
-
-  return context.measureText(text).width;
-}
-
-function getClickedCharacterIndex(
-  input: HTMLInputElement,
-  eventClientX: number
-): number | null {
-  const value = input.value;
-
-  if (!value) {
-    return null;
-  }
-
-  const rect = input.getBoundingClientRect();
-  const style = window.getComputedStyle(input);
-
-  const paddingLeft = Number.parseFloat(style.paddingLeft || "0");
-  const paddingRight = Number.parseFloat(style.paddingRight || "0");
-
-  const contentLeft = rect.left + paddingLeft;
-  const contentRight = rect.right - paddingRight;
-
-  const isRtl = input.dir === "rtl" || style.direction === "rtl";
-
-  if (isRtl) {
-    let cursorRight = contentRight;
-
-    for (let index = 0; index < value.length; index += 1) {
-      const char = value[index];
-      const charWidth = measureTextWidth(input, char);
-      const charLeft = cursorRight - charWidth;
-      const charRight = cursorRight;
-
-      if (eventClientX >= charLeft && eventClientX <= charRight) {
-        return index;
-      }
-
-      cursorRight = charLeft;
-    }
-
-    return null;
-  }
-
-  let cursorLeft = contentLeft;
-
-  for (let index = 0; index < value.length; index += 1) {
-    const char = value[index];
-    const charWidth = measureTextWidth(input, char);
-    const charLeft = cursorLeft;
-    const charRight = cursorLeft + charWidth;
-
-    if (eventClientX >= charLeft && eventClientX <= charRight) {
-      return index;
-    }
-
-    cursorLeft = charRight;
-  }
-
-  return null;
-}
-function getCharacterCenterInsideSongLine(
-  input: HTMLInputElement,
-  charIndex: number
-): { x: number; y: number } {
-  const inputRect = input.getBoundingClientRect();
-  const elementNode = input.closest(".song-line-element");
-
-  if (!(elementNode instanceof HTMLElement)) {
-    return {
-      x: element.width / 2,
-      y: SONG_LINE_HEIGHT / 2,
-    };
-  }
-
-  const elementRect = elementNode.getBoundingClientRect();
-  const style = window.getComputedStyle(input);
-
-  const paddingLeft = Number.parseFloat(style.paddingLeft || "0");
-  const paddingRight = Number.parseFloat(style.paddingRight || "0");
-
-  const value = input.value;
-  const isRtl = input.dir === "rtl" || style.direction === "rtl";
-
-  let charCenterXInInput = 0;
-
-  if (isRtl) {
-    let cursorRight = inputRect.width - paddingRight;
-
-    for (let index = 0; index < value.length; index += 1) {
-      const charWidth = measureTextWidth(input, value[index]);
-      const charLeft = cursorRight - charWidth;
-
-      if (index === charIndex) {
-        charCenterXInInput = charLeft + charWidth / 2;
-        break;
-      }
-
-      cursorRight = charLeft;
-    }
-  } else {
-    let cursorLeft = paddingLeft;
-
-    for (let index = 0; index < value.length; index += 1) {
-      const charWidth = measureTextWidth(input, value[index]);
-      const charLeft = cursorLeft;
-
-      if (index === charIndex) {
-        charCenterXInInput = charLeft + charWidth / 2;
-        break;
-      }
-
-      cursorLeft += charWidth;
-    }
-  }
-
-  const inputXInsideElement = inputRect.left - elementRect.left;
-  const inputYInsideElement = inputRect.top - elementRect.top;
-
-  return {
-    x: inputXInsideElement + charCenterXInInput,
-    y: inputYInsideElement + inputRect.height / 2,
-  };
-}
-function openCircleMenuOnLyrics(event: MouseEvent<HTMLInputElement>) {
+function openCircleMenuOnLyrics(event: MouseEvent<HTMLDivElement>) {
   event.preventDefault();
   event.stopPropagation();
   onSelect();
 
-  const input = event.currentTarget;
-  const charIndex = getClickedCharacterIndex(input, event.clientX);
+  const editor = event.currentTarget;
+  const songLineElement = editor.closest(".song-line-element");
+
+  if (!(songLineElement instanceof HTMLElement)) {
+    return;
+  }
+
+  const charIndex = getClickedCharacterIndexInEditor(
+    editor,
+    event.clientX,
+    event.clientY
+  );
 
   if (charIndex === null) {
     return;
   }
 
-const center = getCharacterCenterInsideSongLine(input, charIndex);
+  const center = getCharacterCenterRelativeTo(
+    editor,
+    charIndex,
+    songLineElement
+  );
+
+  if (!center) {
+    return;
+  }
+
 const circleWidth = 20;
 const circleHeight = 24;
 
 // Must match the lyrics row baseY in attachedSymbolUtils.ts
-const lyricsBaseY = 42;
+const lyricsBaseY = ATTACHED_LYRICS_ROW_Y;
 
 setCircleMenu({
   screenX: event.clientX,
@@ -381,12 +352,49 @@ setCircleMenu({
   height: circleHeight,
 });
 }
+const lyricsRuns = buildLyricsRuns(
+  data.lyrics,
+  data.lyricsStyleSpans
+);
+const lyricsBaseStyle = {
+  fontSize: data.lyricsFontSize,
+  fontFamily: data.lyricsFontFamily,
+  color: data.lyricsColor,
+  fontWeight: data.lyricsBold ? 700 : 400,
+  textAlign,
+} as const;
+
+useLayoutEffect(() => {
+  const editor = lyricsEditorRef.current;
+
+  if (!editor) {
+    return;
+  }
+
+  const spansKey = JSON.stringify(data.lyricsStyleSpans ?? []);
+
+  if (lastRenderedSpansKeyRef.current === spansKey) {
+    if (editor.textContent !== data.lyrics) {
+      const selection = getSelectionOffsets(editor);
+      editor.replaceChildren(buildLyricsEditorFragment(lyricsRuns));
+      setSelectionOffsets(editor, selection);
+    }
+
+    return;
+  }
+
+  const selection = getSelectionOffsets(editor);
+  editor.replaceChildren(buildLyricsEditorFragment(lyricsRuns));
+  setSelectionOffsets(editor, selection);
+  lastRenderedSpansKeyRef.current = spansKey;
+}, [data.lyrics, data.lyricsStyleSpans, lyricsRuns]);
+
   return (
     <div
     data-song-line-id={element.id}
       className={`editor-element song-line-element ${
-        isSelected ? "editor-element-selected" : ""
-      }`}
+        isGuitar ? "song-line-element--guitar " : ""
+      }${isSelected ? "editor-element-selected" : ""}`}
       style={{
         ...getElementFrameStyle({
           ...element,
@@ -424,14 +432,17 @@ startElementDrag(event, {
 });
       }}
     >
-      <div className="song-line-content song-line-content-text-rows" dir="ltr">
+      <div
+        className="song-line-content song-line-content-text-rows"
+        dir={isGuitar ? "rtl" : "ltr"}
+      >
         <input
           className="song-line-chord-text-row"
           value={chordLines.aboveTop ?? ""}
           placeholder="אקורדים"
           dir={chordDirection}
           style={{
-            fontSize: data.chordFontSize,
+            fontSize: getChordLineFontSize(data, "aboveTop"),
             fontFamily: data.chordFontFamily ?? data.lyricsFontFamily,
             color: data.chordColor,
             textAlign: chordTextAlign,
@@ -448,7 +459,7 @@ startElementDrag(event, {
           placeholder="אקורדים מעל"
           dir="ltr"
           style={{
-            fontSize: data.chordFontSize,
+            fontSize: getChordLineFontSize(data, "aboveBottom"),
             fontFamily: data.chordFontFamily ?? data.lyricsFontFamily,
             color: data.chordColor,
           }}
@@ -459,27 +470,33 @@ startElementDrag(event, {
 ): null}
 
         <div className="song-line-lyrics-row">
-          <input
-            ref={lyricsInputRef}
-            className="song-line-lyrics-input"
-            value={data.lyrics}
-            placeholder="שורת שיר"
+          <div
+            ref={lyricsEditorRef}
+            className="song-line-lyrics-input song-line-lyrics-editable"
+            contentEditable
+            suppressContentEditableWarning
+            role="textbox"
+            aria-label="שורת שיר"
+            data-placeholder="שורת שיר"
             dir={direction}
-            style={{
-              fontSize: data.lyricsFontSize,
-              fontFamily: data.lyricsFontFamily,
-              color: data.lyricsColor,
-              fontWeight: data.lyricsBold ? 700 : 400,
-              textAlign,
-            }}
+            style={lyricsBaseStyle}
             onMouseDown={(event) => {
-              setCircleMenu(null);
+              if (event.button === 0) {
+                setCircleMenu(null);
+              }
               event.stopPropagation();
               onSelect();
             }}
+            onInput={handleLyricsInput}
+            onMouseUp={syncLyricsSelection}
+            onKeyUp={syncLyricsSelection}
+            onFocus={syncLyricsSelection}
             onContextMenu={openCircleMenuOnLyrics}
-            onChange={(event) => updateLyrics(event.target.value)}
-            onKeyDown={preventEnter}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+              }
+            }}
           />
         </div>
 {!isGuitar ? (
@@ -490,7 +507,7 @@ startElementDrag(event, {
           placeholder="אקורדים מתחת"
           dir="ltr"
           style={{
-            fontSize: data.chordFontSize,
+            fontSize: getChordLineFontSize(data, "below"),
             fontFamily: data.chordFontFamily ?? data.lyricsFontFamily,
             color: data.chordColor,
           }}
@@ -510,23 +527,7 @@ startElementDrag(event, {
           onMouseDown={(event) => {
             event.preventDefault();
             event.stopPropagation();
-
-            const input = lyricsInputRef.current;
-            if (!input) {
-              return;
-            }
-
-            const caretIndex = input.selectionStart ?? 0;
-            const center = getCharacterCenterInsideSongLine(input, caretIndex);
-
-            onAddAttachedSmallSharpToSongLine(
-              page.id,
-              element.id,
-              center.x - 2,
-              4,
-              8,
-              10
-            );
+            placeAttachedSmallSharpAtLastCaret();
           }}
         >
           + דיאז
@@ -582,7 +583,7 @@ startElementDrag(event, {
           page.id,
           element.id,
           20,
-          isGuitar ? 0 : 18,
+          isGuitar ? 0 : 8,
           90,
           28
         );

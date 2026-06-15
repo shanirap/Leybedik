@@ -17,6 +17,25 @@ import {
 import { EditorCanvas } from "./EditorCanvas";
 import { EditorToolbar } from "./EditorToolbar";
 import { PropertiesPanel } from "./PropertiesPanel";
+import {
+  computeAttachedOffsetsFromPosition,
+} from "./attachedSymbolUtils";
+import {
+  applyAttachedSymbolKeyboardOffset,
+  clamp,
+  clampFreeElementPosition,
+  getArrowKeyDelta,
+  isKeyboardMovableFreeElement,
+  shouldIgnoreKeyboardMove,
+} from "../utils/editorMovementUtils";
+import {
+  FIRST_TEMPLATE_Y,
+  SONG_LINE_GAP,
+  SONG_LINE_HEIGHT,
+  TAB_BLOCK_HEIGHT,
+  TEMPLATE_LEFT,
+  TEMPLATE_WIDTH,
+} from "../constants/songLineLayout";
 import "./LeybedikStudio.css";
 
 
@@ -43,12 +62,9 @@ interface LeybedikStudioProps {
 const DEFAULT_PAGE_ID = "page-1";
 const TEXTBOX_MIN_WIDTH = 80;
 const TEXTBOX_MIN_HEIGHT = 40;
-const SONGLINE_HEIGHT = 92;
 const SONGLINE_MIN_WIDTH = 180;
 const TAB_BLOCK_MIN_WIDTH = 180;
 const TAB_BLOCK_MIN_HEIGHT = 120;
-const SONG_LINE_HEIGHT = 92;
-const SONG_LINE_GAP = 10;
 const A4_PAGE_WIDTH = 794;
 const A4_PAGE_HEIGHT = 1123;
 
@@ -56,11 +72,6 @@ const PAGE_PADDING_X = 48;
 const FIRST_SONG_LINE_Y = 80;
 const SONG_LINE_WIDTH = A4_PAGE_WIDTH - PAGE_PADDING_X * 2;
 const SONG_LINE_BOTTOM_LIMIT = A4_PAGE_HEIGHT - 70;
-const TEMPLATE_LEFT = 40;
-const TEMPLATE_WIDTH = 680;
-const TAB_BLOCK_HEIGHT = 150;
-const TEMPLATE_GAP = 12;
-const FIRST_TEMPLATE_Y = 120;
 
 function isTemplateElement(element: EditorElement): boolean {
   return element.type === "songLine" || element.type === "tabBlock";
@@ -123,7 +134,7 @@ function reorderTemplateElementByTargetY(
       height: getTemplateElementHeight(element),
     };
 
-    nextY += getTemplateElementHeight(element) + TEMPLATE_GAP;
+    nextY += getTemplateElementHeight(element) + SONG_LINE_GAP;
 
     return updatedElement;
   });
@@ -214,22 +225,7 @@ function createId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-function shouldIgnoreKeyboardMove(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
 
-  return Boolean(
-    target.closest("input") ||
-      target.closest("textarea") ||
-      target.closest("select") ||
-      target.closest("button") ||
-      target.closest("[contenteditable='true']")
-  );
-}
 function getFirstPage(document: EditorDocumentContent): PageJson {
   return (
     document.pages[0] ?? {
@@ -283,7 +279,7 @@ function getSongLineBundle(page: PageJson, songLineId: string): EditorElement[] 
 }
 function getElementTemplateHeight(element: EditorElement): number {
   if (element.type === "songLine") {
-    return 92;
+    return SONG_LINE_HEIGHT;
   }
 
   if (element.type === "tabBlock") {
@@ -309,7 +305,7 @@ function getNextTemplateElementPosition(page: PageJson): { x: number; y: number 
 
   return {
     x: TEMPLATE_LEFT,
-    y: lastElement.y + getElementTemplateHeight(lastElement) + TEMPLATE_GAP,
+    y: lastElement.y + getElementTemplateHeight(lastElement) + SONG_LINE_GAP,
   };
 }
 
@@ -334,6 +330,11 @@ export function LeybedikStudio(props: LeybedikStudioProps) {
   );
   const [activePageId, setActivePageId] = useState(DEFAULT_PAGE_ID);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const [songLineLyricsSelection, setSongLineLyricsSelection] = useState<{
+    elementId: string;
+    start: number;
+    end: number;
+  } | null>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "dirty" | "saving" | "error">("saved");
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
@@ -360,6 +361,15 @@ useEffect(() => {
     titleRef.current = title;
   }, [title]);
 
+  useEffect(() => {
+    if (
+      !selectedElementId ||
+      songLineLyricsSelection?.elementId !== selectedElementId
+    ) {
+      setSongLineLyricsSelection(null);
+    }
+  }, [selectedElementId, songLineLyricsSelection?.elementId]);
+
 
 
 
@@ -379,6 +389,27 @@ useEffect(() => {
   );
 
   const selectedElement = selectedElementInfo?.element ?? null;
+  const activeSongLineLyricsSelection = useMemo(() => {
+    if (
+      selectedElement?.type !== "songLine" ||
+      !songLineLyricsSelection ||
+      songLineLyricsSelection.elementId !== selectedElement.id
+    ) {
+      return null;
+    }
+
+    return {
+      start: songLineLyricsSelection.start,
+      end: songLineLyricsSelection.end,
+    };
+  }, [selectedElement, songLineLyricsSelection]);
+
+  const handleSongLineLyricsSelectionChange = useCallback(
+    (elementId: string, start: number, end: number) => {
+      setSongLineLyricsSelection({ elementId, start, end });
+    },
+    []
+  );
 async function handleSave(isAutosave = false) {
   const documentToSave = currentDocument;
 
@@ -491,7 +522,7 @@ const moveSelectedSongLineStackByKeyboard = useCallback(
 
         const minDelta =
           previousBottom > 0
-            ? previousBottom + TEMPLATE_GAP - selectedY
+            ? previousBottom + SONG_LINE_GAP - selectedY
             : -selectedY;
 
         const movingBottom = Math.max(
@@ -541,6 +572,14 @@ useEffect(() => {
       return;
     }
 
+    const selectedElement = editorStateRef.current.pages
+      .flatMap((page) => page.elements)
+      .find((element) => element.id === selectedElementId);
+
+    if (selectedElement?.type !== "songLine") {
+      return;
+    }
+
     event.preventDefault();
 
     const step = event.shiftKey ? 10 : 1;
@@ -555,7 +594,7 @@ useEffect(() => {
   return () => {
     window.removeEventListener("keydown", handleKeyDown);
   };
-}, [moveSelectedSongLineStackByKeyboard]);
+}, [moveSelectedSongLineStackByKeyboard, selectedElementId]);
 
 
   const updateElement = useCallback(
@@ -917,15 +956,17 @@ const addGuitarSongLine = useCallback(() => {
       instrument: "guitar",
 
       lyrics: "",
-      lyricsFontSize: 22,
+      lyricsFontSize: 19,
       lyricsFontFamily: "Arial",
       lyricsColor: "#111827",
       lyricsBold: false,
+      lyricsUnderline: "none",
+      lyricsStyleSpans: [],
       lyricsAlign: "right",
       direction: "rtl",
 
       chords: [],
-      chordFontSize: 18,
+      chordFontSize: 14,
       chordColor: "#111827",
       chordLines: {
         aboveTop: "",
@@ -988,14 +1029,16 @@ const addSongLine = useCallback(() => {
     zIndex: getNextZIndex(state),
     data: {
       lyrics: "",
-      lyricsFontSize: 22,
+      lyricsFontSize: 19,
       lyricsFontFamily: "Arial",
       lyricsColor: "#111827",
       lyricsBold: false,
+      lyricsUnderline: "none",
+      lyricsStyleSpans: [],
       lyricsAlign: "left",
       direction: "ltr",
       chords: [],
-      chordFontSize: 16,
+      chordFontSize: 14,
       chordColor: "#111827",
       chordLines: {
         aboveTop: "",
@@ -1314,7 +1357,7 @@ const addAttachedVoltaToSongLine = useCallback(
     pageId: string,
     songLineId: string,
     offsetX = 20,
-    offsetY = -18,
+    offsetY = -10,
     width = 90,
     height = 28
   ) => {
@@ -1362,8 +1405,8 @@ const addAttachedSmallSharpToSongLine = useCallback(
     songLineId: string,
     offsetX: number,
     offsetY = -17,
-    width = 12,
-    height = 14
+    width = 14,
+    height = 16
   ) => {
     const zIndex = getNextZIndex(editorStateRef.current);
 
@@ -1567,72 +1610,6 @@ const deleteElement = useCallback(
     [updateDocumentState]
   );
 
-function moveAttachedSymbolHorizontally(elementId: string, deltaX: number) {
-  updateDocumentState((current) => ({
-    ...current,
-    pages: current.pages.map((page) => ({
-      ...page,
-      elements: page.elements.map((element) => {
-        if (element.id !== elementId || element.type !== "symbol") {
-          return element;
-        }
-
-        if (!element.data.attachment) {
-          return element;
-        }
-
-        return {
-          ...element,
-          data: {
-            ...element.data,
-            attachment: {
-              ...element.data.attachment,
-              offsetX: element.data.attachment.offsetX + deltaX,
-            },
-          },
-        };
-      }),
-    })),
-  }));
-}
-
-  useEffect(() => {
-  function handleKeyDown(event: KeyboardEvent) {
-    if (!selectedElementId) {
-      return;
-    }
-
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
-      return;
-    }
-
-    const selectedElement = editorStateRef.current.pages
-      .flatMap((page) => page.elements)
-      .find((element) => element.id === selectedElementId);
-
-    if (selectedElement?.type !== "symbol") {
-      return;
-    }
-
-    if (!selectedElement.data.attachment) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const step = event.shiftKey ? 8 : 2;
-    const deltaX = event.key === "ArrowLeft" ? -step : step;
-
-    moveAttachedSymbolHorizontally(selectedElement.id, deltaX);
-  }
-
-  window.addEventListener("keydown", handleKeyDown);
-
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown);
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [selectedElementId]);
   const moveElement = useCallback(
   (pageId: string, elementId: string, x: number, y: number) => {
     updateDocumentState((current) => ({
@@ -1652,6 +1629,35 @@ function moveAttachedSymbolHorizontally(elementId: string, deltaX: number) {
   return reorderTemplateElementByTargetY(page, elementId, y);
 }
 
+        if (element.type === "symbol" && element.data.attachment) {
+          const offsets = computeAttachedOffsetsFromPosition(page, element, x);
+
+          if (!offsets) {
+            return page;
+          }
+
+          return {
+            ...page,
+            elements: page.elements.map((item) =>
+              item.id === elementId && item.type === "symbol"
+                ? {
+                    ...item,
+                    x: 0,
+                    y: 0,
+                    data: {
+                      ...item.data,
+                      attachment: {
+                        ...item.data.attachment!,
+                        offsetX: offsets.offsetX,
+                        offsetY: offsets.offsetY,
+                      },
+                    },
+                  }
+                : item
+            ),
+          };
+        }
+
 return {
           ...page,
           elements: page.elements.map((item) =>
@@ -1670,6 +1676,102 @@ return {
   [updateDocumentState]
 );
 
+const moveSelectedFreeElementByKeyboard = useCallback(
+  (deltaX: number, deltaY: number) => {
+    if (!selectedElementId) {
+      return;
+    }
+
+    const selectedInfo = findElement(
+      editorStateRef.current,
+      selectedElementId
+    );
+
+    if (!selectedInfo || !isKeyboardMovableFreeElement(selectedInfo.element)) {
+      return;
+    }
+
+    const page = editorStateRef.current.pages.find(
+      (item) => item.id === selectedInfo.pageId
+    );
+
+    if (!page) {
+      return;
+    }
+
+    const { element } = selectedInfo;
+
+    if (element.type === "symbol" && element.data.attachment) {
+      updateDocumentState((current) => ({
+        ...current,
+        pages: current.pages.map((currentPage) => ({
+          ...currentPage,
+          elements: currentPage.elements.map((currentElement) => {
+            if (
+              currentElement.id !== element.id ||
+              currentElement.type !== "symbol" ||
+              !currentElement.data.attachment
+            ) {
+              return currentElement;
+            }
+
+            return applyAttachedSymbolKeyboardOffset(currentElement, deltaX);
+          }),
+        })),
+      }));
+      return;
+    }
+
+    const { x: nextX, y: nextY } = clampFreeElementPosition(
+      element.x + deltaX,
+      element.y + deltaY,
+      element.width,
+      element.height,
+      page.width,
+      page.height
+    );
+
+    moveElement(selectedInfo.pageId, element.id, nextX, nextY);
+  },
+  [moveElement, selectedElementId, updateDocumentState]
+);
+
+useEffect(() => {
+  function handleKeyDown(event: KeyboardEvent) {
+    if (!selectedElementId) {
+      return;
+    }
+
+    if (shouldIgnoreKeyboardMove(event.target)) {
+      return;
+    }
+
+    const step = event.shiftKey ? 10 : 2;
+    const delta = getArrowKeyDelta(event.key, step);
+
+    if (!delta) {
+      return;
+    }
+
+    const selectedElement = editorStateRef.current.pages
+      .flatMap((page) => page.elements)
+      .find((element) => element.id === selectedElementId);
+
+    if (!isKeyboardMovableFreeElement(selectedElement)) {
+      return;
+    }
+
+    event.preventDefault();
+    moveSelectedFreeElementByKeyboard(delta.deltaX, delta.deltaY);
+  }
+
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+}, [moveSelectedFreeElementByKeyboard, selectedElementId]);
+
   const resizeElement = useCallback(
     (pageId: string, elementId: string, width: number, height: number) => {
       const page = editorStateRef.current.pages.find((item) => item.id === pageId);
@@ -1683,8 +1785,8 @@ return {
 
       if (element.type === "songLine") {
         minWidth = SONGLINE_MIN_WIDTH;
-        minHeight = SONGLINE_HEIGHT;
-        nextHeight = SONGLINE_HEIGHT;
+        minHeight = SONG_LINE_HEIGHT;
+        nextHeight = SONG_LINE_HEIGHT;
       }
 
       if (element.type === "tabBlock") {
@@ -1919,6 +2021,7 @@ const isTempDocument = currentDocument
           onAddAttachedRepeatEndToSongLine={addAttachedRepeatEndToSongLine}
           onAddAttachedSmallSharpToSongLine={addAttachedSmallSharpToSongLine}
           onDropElement={handleElementDrop}
+          onSongLineLyricsSelectionChange={handleSongLineLyricsSelectionChange}
           />
         </main>
 
@@ -1942,6 +2045,7 @@ const isTempDocument = currentDocument
   <div className="properties-panel-shell-content">
     <PropertiesPanel
           selectedElement={selectedElement}
+          songLineLyricsSelection={activeSongLineLyricsSelection}
           onUpdateElement={updateSelectedElement}
           onUpdateElementData={updateSelectedElementData}
           onDelete={() => {

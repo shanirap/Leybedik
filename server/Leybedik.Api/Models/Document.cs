@@ -20,8 +20,7 @@ public class Document
   public DocumentFolder? Folder { get; set; }
   
   [Required]
-  [Column(TypeName = "nvarchar(max)")]
-  public string ContentJson { get; set; } = "{}";
+  public string ContentJson { get; set; } = string.Empty;
 
   public DateTime CreatedAt { get; set; }
 

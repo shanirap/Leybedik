@@ -34,6 +34,14 @@
 
 ## Editor (Leybedik Studio)
 
+### שורות שיר וסימנים צמודים
+- [ ] **שורת שיר קומפקטית (78px)** — גובה, מרווחים ויישור אקורדים/מילים תקינים
+- [ ] **סימנים צמודים** — עיגול/דיאז/חץ/volta/סיום חוזר נשארים על השורה; גרירה אופקית בלבד
+- [ ] **דיאז (+ דיאז)** — נוסף במיקום הסמן בשורת המילים
+- [ ] **מילים מודגשות (legacy)** — מסמך ישן עם `lyricsBold: true` נפתח מודגש
+- [ ] **הדגשה חלקית** — `lyricsStyleSpans` עובד על טווח נבחר
+
+### כללי עורך
 - [ ] **כתיבת טקסט** בבלוק מילים / textarea
 - [ ] **הוספת בלוק מילים**
 - [ ] **הוספת אקורד** (קליק על chord-lane)
@@ -51,6 +59,12 @@
 ---
 
 ## Backend (API)
+
+### תיקיות
+- [ ] **יצירת תיקייה** — שם חדש נשמר
+- [ ] **שם כפול** — הודעת שגיאה בעברית (לא "שגיאת שרת 409")
+- [ ] **מחיקת תיקייה ריקה** — נמחקת מהרשימה
+- [ ] **מחיקת תיקייה עם מסמכים** — הודעה: "לא ניתן למחוק תיקייה שיש בה מסמכים."
 
 ### Auth & JWT
 - [ ] **Register** — 200 + token; 409 על אימייל כפול
@@ -93,8 +107,10 @@
 
 | אזור | כלי | קבצים |
 |------|-----|--------|
-| Frontend utils | Vitest (`vitest.config.ts` + `vite.config.ts`) | `src/test/setup.ts`, `authStorage.test.ts`, `editorDocumentSerializer.test.ts`, `documentsApi.test.ts`, `importsApi.test.ts` |
-| Backend | xUnit + EF InMemory | `JwtServiceTests.cs`, `LeybedikDbContextTests.cs`, `MockScanImportServiceTests.cs`, `ScanImportContentNormalizerTests.cs`, `ScanImportContentValidatorTests.cs`, `ScanImportJsonExtractorTests.cs`, `ScanImportPromptBuilderTests.cs`, `AiScanImportServiceTests.cs` |
+| Frontend utils | Vitest | `edgeCases.test.ts`, `attachedSymbolUtils.test.ts`, `editorMovementUtils.test.ts`, `migrateCompactSongLineLayout.test.ts`, `lyricsStyleSpans.test.ts`, `songLineLayout.test.ts`, ועוד |
+| Frontend API/UI | Vitest + Testing Library | `documentsApi.test.ts`, `foldersApi.test.ts`, `DocumentsHome.test.tsx` |
+| Backend | xUnit + EF InMemory | `FoldersBehaviorTests.cs`, `LeybedikDbContextTests.cs`, `JwtServiceTests.cs`, scan import tests |
+| CI | GitHub Actions | `.github/workflows/ci.yml` — lint, test, build (client) + dotnet test (server) |
 
 ---
 

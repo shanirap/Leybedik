@@ -1,6 +1,6 @@
 using Leybedik.Api.Models;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.EntityFrameworkCore.Infrastructure;
 namespace Leybedik.Api.Data;
 
 public class LeybedikDbContext : DbContext
@@ -45,8 +45,13 @@ public class LeybedikDbContext : DbContext
     {
       entity.ToTable("Documents");
 
-      entity.Property(d => d.ContentJson)
-        .HasColumnType("nvarchar(max)");
+      var contentJsonProperty = entity.Property(d => d.ContentJson)
+        .IsRequired();
+
+      if (Database.IsSqlServer())
+      {
+        contentJsonProperty.HasColumnType("nvarchar(max)");
+      }
 
       entity.HasOne(d => d.OwnerUser)
         .WithMany(u => u.Documents)

@@ -17,6 +17,7 @@ const mockGetDocuments = vi.fn();
 const mockGetFolders = vi.fn();
 const mockCreateFolder = vi.fn();
 const mockUpdateFolder = vi.fn();
+const mockDeleteFolder = vi.fn();
 const mockDeleteDocument = vi.fn();
 const mockGetDocument = vi.fn();
 const mockCreateDocument = vi.fn();
@@ -32,6 +33,7 @@ vi.mock("../api/foldersApi", () => ({
   getFolders: () => mockGetFolders(),
   createFolder: (name: string) => mockCreateFolder(name),
   updateFolder: (id: number, name: string) => mockUpdateFolder(id, name),
+  deleteFolder: (id: number) => mockDeleteFolder(id),
 }));
 
 function emptyContent() {
@@ -59,6 +61,11 @@ const folders: DocumentFolder[] = [
     id: 20,
     name: "כינור",
     documentsCount: 1,
+  },
+  {
+    id: 30,
+    name: "ריקה",
+    documentsCount: 0,
   },
 ];
 
@@ -127,6 +134,8 @@ beforeEach(() => {
       documentsCount: 0,
     })
   );
+  mockDeleteFolder.mockResolvedValue(undefined);
+  vi.stubGlobal("confirm", vi.fn(() => true));
 });
 afterEach(() => {
   cleanup();
@@ -248,5 +257,55 @@ await user.click(guitarFolder);
         folderName: "גיטרה",
       })
     );
+  });
+
+  it("מציג מחק רק לתיקייה ריקה", async () => {
+    renderHome();
+
+    await screen.findByText("ריקה");
+
+    const emptyFolderCard = screen
+      .getByText("ריקה")
+      .closest("button") as HTMLElement;
+    const guitarFolderCard = screen
+      .getByText("גיטרה")
+      .closest("button") as HTMLElement;
+
+    expect(within(emptyFolderCard).getByText("מחק")).toBeInTheDocument();
+    expect(within(guitarFolderCard).queryByText("מחק")).not.toBeInTheDocument();
+  });
+
+  it("מחיקת תיקייה ריקה קוראת לשרת ומסירה אותה מהמסך", async () => {
+    const user = userEvent.setup();
+
+    renderHome();
+
+    const emptyFolderCard = (await screen.findByText("ריקה")).closest(
+      "button"
+    ) as HTMLElement;
+
+    await user.click(within(emptyFolderCard).getByText("מחק"));
+
+    await waitFor(() => {
+      expect(mockDeleteFolder).toHaveBeenCalledWith(30);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText("ריקה")).not.toBeInTheDocument();
+    });
+  });
+
+  it("מציג מחק תיקייה בתצוגת תיקייה פתוחה וריקה", async () => {
+    const user = userEvent.setup();
+
+    renderHome();
+
+    const emptyFolderCard = (await screen.findByText("ריקה")).closest(
+      "button"
+    ) as HTMLElement;
+
+    await user.click(emptyFolderCard);
+
+    expect(await screen.findByText("מחק תיקייה")).toBeInTheDocument();
   });
 });

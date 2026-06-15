@@ -43,3 +43,21 @@ export async function updateFolder(
 
   return (await res.json()) as DocumentFolder;
 }
+
+export async function deleteFolder(id: number): Promise<void> {
+  const res = await apiRequest(`/folders/${id}`, {
+    method: "DELETE",
+  });
+
+  if (res.status === 404) {
+    throw new Error("התיקייה לא נמצאה");
+  }
+
+  if (res.status === 409) {
+    throw new Error(await readApiError(res));
+  }
+
+  if (!res.ok) {
+    throw new Error(await readApiError(res));
+  }
+}
